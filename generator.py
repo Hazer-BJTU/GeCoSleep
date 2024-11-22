@@ -1,4 +1,6 @@
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
 from torch import nn
 from models import init_weight
 from data_preprocessing import *
@@ -24,12 +26,13 @@ class Distribute(nn.Module):
         self.std = nn.Sequential(
             nn.Conv1d(input_channels, hiddens, kernel_size=kernel_size, stride=1, padding='same'),
             nn.BatchNorm1d(hiddens), nn.ReLU(inplace=True),
-            nn.Conv1d(hiddens, output_channels, kernel_size=kernel_size, stride=1, padding='same')
+            nn.Conv1d(hiddens, output_channels, kernel_size=kernel_size, stride=1, padding='same'),
+            nn.Softplus()
         )
 
     def forward(self, X):
         mu, sigma = self.mean(X), self.std(X)
-        return mu, sigma.exp()
+        return mu, sigma
 
 
 class Encoder(nn.Module):
@@ -122,7 +125,7 @@ class UVAE(nn.Module):
         for mu, sigma in distributions:
             eps = torch.randn(mu.shape, dtype=torch.float32, requires_grad=False, device=X.device)
             z = mu + eps * sigma
-            kl_divergence = -2 * torch.log(sigma) + sigma.pow(2) + mu.pow(2) - 1
+            kl_divergence = -2 * torch.log(sigma + 1e-5) + sigma.pow(2) + mu.pow(2) - 1
             kl_loss += torch.mean(kl_divergence) * 0.5
             samples.append(z)
         output = self.decoder(samples)
@@ -130,8 +133,61 @@ class UVAE(nn.Module):
 
 
 if __name__ == '__main__':
-    net = UVAE(2)
-    X = torch.randn(4, 10, 2, 3000)
-    y, kl_loss = net(X)
-    print(y.shape, kl_loss)
+    '''
+    net.apply(init_weight)
+    datas, labels = load_data_sleepedf('/home/ShareData/sleep-edf-153-3chs', 10, ['Fpz-Cz', 'EOG'], 50)
+    train, _, _ = create_fold([idx for idx in range(50)], [], [], [datas], [labels])
+    train_loader = DataLoader(train, batch_size=256, shuffle=False)
+    device = torch.device(f'cuda:{0}')
+    net.to(device)
+    num_epoch = 400
+    lr = 1e-3
+    wait = 20
+    optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, max(num_epoch // 6, 1), 0.6)
+    recloss = nn.BCEWithLogitsLoss()
+    net.train()
+    for epoch in range(num_epoch):
+        total_rec_loss, total_kl_loss, cnt = 0, 0, 0
+        for X, _, _ in train_loader:
+            X = X.to(device)
+            optimizer.zero_grad()
+            X_hat, kl_loss = net(X)
+            rec_loss = recloss(X_hat.view(-1), X.sigmoid().view(-1))
+            if epoch % wait == 0:
+                (rec_loss + kl_loss).backward()
+            else:
+                rec_loss.backward()
+            nn.utils.clip_grad_norm_(net.parameters(), max_norm=20, norm_type=2)
+            optimizer.step()
+            total_rec_loss += rec_loss.item()
+            total_kl_loss += kl_loss.item()
+            cnt += 1
+        print(f'epoch: {epoch}, rec loss: {total_rec_loss / cnt:.3f}, kl loss: {total_kl_loss / cnt:.3f}')
+        scheduler.step()
     torch.save(net.state_dict(), 'uvae.pth')
+    '''
+    net = UVAE(2)
+    net.apply(init_weight)
+    net.load_state_dict(torch.load('uvae.pth', map_location='cpu', weights_only=True))
+    net.eval()
+    samples = [torch.randn((1, 16, 1875)), torch.randn((1, 32, 375)), torch.randn((1, 64, 75)), torch.randn((1, 256, 15))]
+    X = net.decoder(samples)
+    X = X.detach()
+    datas, labels = load_data_sleepedf('/home/ShareData/sleep-edf-153-3chs', 10, ['Fpz-Cz', 'EOG'], 1)
+    train, _, _ = create_fold([0], [], [], [datas], [labels])
+    train_loader = DataLoader(train, batch_size=256, shuffle=False)
+    fig, axs = plt.subplots(4, 1, figsize=(10, 8))
+    axs[0].plot(np.arange(3000), X[0][4][0].numpy(), 'b')
+    axs[0].set_title('fake1')
+    axs[1].plot(np.arange(3000), X[0][4][1].numpy(), 'b')
+    axs[1].set_title('fake2')
+    for X, _, _ in train_loader:
+        X = X.detach()
+        axs[2].plot(np.arange(3000), X[0][5][0].numpy(), 'b')
+        axs[2].set_title('real1')
+        axs[3].plot(np.arange(3000), X[0][5][1].numpy(), 'b')
+        axs[3].set_title('real2')
+        break
+    plt.show()
+    plt.savefig('generater.png')
