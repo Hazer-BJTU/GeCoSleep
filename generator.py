@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from torch import nn
-from models import init_weight
+from models import *
 from data_preprocessing import *
 
 
@@ -87,12 +87,12 @@ class Decoder(nn.Module):
         self.conv3_1 = conv_layer(64, 32, 5, 1)
         self.conv3_2 = conv_layer(32, 32, 5, 1)
         self.up3 = nn.ConvTranspose1d(32, 16, kernel_size=5, stride=5)
-        self.conv4_1 = nn.ConvTranspose1d(32, 8, kernel_size=4, stride=4)
-        self.conv4_2 = nn.ConvTranspose1d(8, 4, kernel_size=4, stride=4)
+        self.conv4_1 = nn.ConvTranspose1d(32, 32, kernel_size=4, stride=4)
+        self.conv4_2 = nn.ConvTranspose1d(32, 32, kernel_size=4, stride=4)
         self.output = nn.Sequential(
-            nn.Conv1d(4, 4, kernel_size=49, stride=1, padding='same'),
-            nn.BatchNorm1d(4), nn.ReLU(),
-            nn.Conv1d(4, output_channels, kernel_size=49, stride=1, padding='same')
+            nn.Conv1d(32, 32, kernel_size=49, stride=1, padding='same'),
+            nn.BatchNorm1d(32), nn.ReLU(),
+            nn.Conv1d(32, output_channels, kernel_size=49, stride=1, padding='same')
         )
 
     def forward(self, samples):
@@ -133,38 +133,55 @@ class UVAE(nn.Module):
 
 
 if __name__ == '__main__':
-    '''
+    net = UVAE(2)
+    critic = DeepSleepNet(0.25)
     net.apply(init_weight)
+    critic.apply(init_weight)
     datas, labels = load_data_sleepedf('/home/ShareData/sleep-edf-153-3chs', 10, ['Fpz-Cz', 'EOG'], 50)
     train, _, _ = create_fold([idx for idx in range(50)], [], [], [datas], [labels])
     train_loader = DataLoader(train, batch_size=256, shuffle=False)
     device = torch.device(f'cuda:{0}')
     net.to(device)
-    num_epoch = 400
+    critic.to(device)
+    num_epoch = 200
     lr = 1e-3
-    wait = 20
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, max(num_epoch // 6, 1), 0.6)
-    recloss = nn.BCEWithLogitsLoss()
-    net.train()
+    optimizerC = torch.optim.Adam(critic.parameters(), lr=lr)
+    schedulerC = torch.optim.lr_scheduler.StepLR(optimizerC, max(num_epoch // 6, 1), 0.6)
+    recloss = nn.MSELoss()
+    celoss = nn.CrossEntropyLoss()
+    net.train(), critic.train()
     for epoch in range(num_epoch):
-        total_rec_loss, total_kl_loss, cnt = 0, 0, 0
-        for X, _, _ in train_loader:
-            X = X.to(device)
+        total_rec_loss, total_kl_loss, total_task_loss, total_L, cnt = 0, 0, 0, 0, 0
+        for X, y, _ in train_loader:
+            X, y = X.to(device), y.to(device)
+            '''train critic'''
+            optimizerC.zero_grad()
+            y_hat = critic(X)
+            L = celoss(y_hat, y.view(-1))
+            L.backward()
+            nn.utils.clip_grad_norm_(critic.parameters(), max_norm=20, norm_type=2)
+            optimizerC.step()
+            total_L += L.item()
+            '''train uvae'''
             optimizer.zero_grad()
+            optimizerC.zero_grad()
             X_hat, kl_loss = net(X)
-            rec_loss = recloss(X_hat.view(-1), X.sigmoid().view(-1))
-            if epoch % wait == 0:
-                (rec_loss + kl_loss).backward()
-            else:
-                rec_loss.backward()
+            rec_loss = recloss(X_hat, X)
+            yc = critic(X_hat)
+            task_loss = celoss(yc, y_hat.detach().softmax(dim=1))
+            (rec_loss + kl_loss + task_loss).backward()
             nn.utils.clip_grad_norm_(net.parameters(), max_norm=20, norm_type=2)
             optimizer.step()
             total_rec_loss += rec_loss.item()
             total_kl_loss += kl_loss.item()
+            total_task_loss += task_loss.item()
             cnt += 1
-        print(f'epoch: {epoch}, rec loss: {total_rec_loss / cnt:.3f}, kl loss: {total_kl_loss / cnt:.3f}')
+        print(f'epoch: {epoch}, rec loss: {total_rec_loss / cnt:.3f}, kl loss: {total_kl_loss / cnt:.3f}, '
+              f'task loss: {total_task_loss / cnt:.3f}, L: {total_L / cnt:.3f}')
         scheduler.step()
+        schedulerC.step()
     torch.save(net.state_dict(), 'uvae.pth')
     '''
     net = UVAE(2)
@@ -191,3 +208,4 @@ if __name__ == '__main__':
         break
     plt.show()
     plt.savefig('generater.png')
+    '''
