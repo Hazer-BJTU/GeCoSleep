@@ -37,14 +37,18 @@ class RawDataEncoder(nn.Module):
 
 
 class FrequencyEncoder(nn.Module):
-    def __init__(self, input_channels, output_features=512, sample_rate=100, **kwargs):
+    def __init__(self, input_channels, dropout, output_features=512, sample_rate=100, **kwargs):
         super(FrequencyEncoder, self).__init__(**kwargs)
         self.input_channels = input_channels
+        self.dropout = dropout
+        self.output_features = output_features
         self.sample_rate = sample_rate
         self.pooling = nn.AvgPool1d(kernel_size=5, stride=5)
         self.block = nn.Sequential(
-            nn.Linear(600, output_features), nn.ReLU(),
-            nn.Linear(output_features, output_features), nn.ReLU()
+            nn.Linear(600, output_features),
+            nn.ReLU(), nn.Dropout(dropout),
+            nn.Linear(output_features, output_features),
+            nn.ReLU(), nn.Dropout(dropout)
         )
 
     def forward(self, X):
@@ -103,7 +107,7 @@ class SleepNet(nn.Module):
         self.input_channels = input_channels
         self.dropout = dropout
         self.encoder1 = RawDataEncoder(input_channels, dropout)
-        self.encoder2 = FrequencyEncoder(input_channels, 512)
+        self.encoder2 = FrequencyEncoder(input_channels, dropout, 512)
         self.gru1 = GRULayer(672, 256)
         self.gru2 = GRULayer(512, 256)
         self.att1 = AttentionLayer(512, 256)
