@@ -17,12 +17,13 @@ parser.add_argument('--sleep_edf_path', type=str, nargs='?',
                     default='/home/ShareData/sleep-edf-153-3chs', help='file path of sleepedf dataset')
 parser.add_argument('--sleep_edf', nargs='+', default=['Fpz-Cz', 'EOG'], help='channels of sleepedf')
 parser.add_argument('--task_num', type=int, nargs='?', default=4, help='number of tasks')
-parser.add_argument('--task_names', nargs='+', default=['ISRUC1', 'SHHS', 'MASS', 'SLEEP-EDF'],
+parser.add_argument('--task_names', nargs='+', default=['ISRUC1', 'SHHS', 'MASS', 'Sleep-EDF'],
                     help='the list of task names')
 parser.add_argument('--cuda_idx', type=int, nargs='?', default=0, help='device index')
-parser.add_argument('--window_size', type=int, nargs='?', default=10, help='length of sequence')
-parser.add_argument('--total_num', nargs='+', default=[100, 200, 60, 150], help='number of examples for each task')
-parser.add_argument('--fold_num', type=int, nargs='?', default=10, help='number of a folds')
+parser.add_argument('--window_size', type=int, nargs='?', default=5, help='length of sequence')
+parser.add_argument('--total_num', nargs='+', default={'ISRUC1': 5, 'SHHS': 6, 'MASS': 7, 'Sleep-EDF': 8},
+                    help='number of examples for each task')
+parser.add_argument('--fold_num', type=int, nargs='?', default=10, help='number of a single fold')
 parser.add_argument('--num_epochs', type=int, nargs='?', default=200, help='number of epochs')
 parser.add_argument('--batch_size', type=int, nargs='?', default=256, help='batch size')
 parser.add_argument('--valid_epoch', type=int, nargs='?', default=10, help='validating interval')
