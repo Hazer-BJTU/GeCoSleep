@@ -135,3 +135,4 @@ if __name__ == '__main__':
     net = SleepNet(2, 0.25)
     X = torch.randn((8, 5, 2, 3000), dtype=torch.float32)
     print(net(X).shape)
+    torch.save(net.state_dict(), 'MSleepNet.pth')
