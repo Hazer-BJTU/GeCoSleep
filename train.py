@@ -51,7 +51,8 @@ def allocate_fold(args):
         task_test_idx = []
         task_valid_idx = []
         task_train_idx = []
-        for num_samples in args.total_num:
+        for task_name in args.task_names:
+            num_samples = args.total_num[task_name]
             assert num_samples % args.fold_num == 0
             num_samples_fold = num_samples // args.fold_num
             task_test_idx.append([i for i in range(fold_idx * num_samples_fold, (fold_idx + 1) * num_samples_fold)])

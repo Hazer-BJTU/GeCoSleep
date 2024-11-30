@@ -8,7 +8,7 @@ import random
 class CLnetwork:
     def __init__(self, args):
         self.args = args
-        self.net = DeepSleepNet(args.dropout)
+        self.net = SleepNet(2, args.dropout)
         self.net.apply(init_weight)
         self.scheduler = None
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -33,11 +33,6 @@ class CLnetwork:
         self.train_loss = 0.0
         self.confusion_matrix.clear()
         self.net.train()
-        if self.task > 0:
-            # freeze BN
-            for m in self.net.modules():
-                if isinstance(m, nn.BatchNorm1d):
-                    m.eval()
 
     def observe(self, X, y, first_time=False):
         X, y = X.to(self.device), y.to(self.device)

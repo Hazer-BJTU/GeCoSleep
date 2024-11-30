@@ -2,36 +2,28 @@ import torch
 import torch.nn as nn
 
 
-class FeatureExtraction(nn.Module):
+class RawDataEncoder(nn.Module):
     def __init__(self, input_channels, dropout, **kwargs):
-        super(FeatureExtraction, self).__init__(**kwargs)
+        super(RawDataEncoder, self).__init__(**kwargs)
         self.input_channels = input_channels
         self.dropout = dropout
         self.block1 = nn.Sequential(
-            nn.Conv1d(input_channels, 64, kernel_size=50, stride=6),
-            nn.BatchNorm1d(64), nn.ReLU(),
+            nn.Conv1d(input_channels, 64, kernel_size=50, stride=6), nn.ReLU(),
             nn.MaxPool1d(kernel_size=8, stride=8), nn.Dropout(dropout),
-            nn.Conv1d(64, 128, kernel_size=9, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
-            nn.Conv1d(128, 128, kernel_size=9, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
-            nn.Conv1d(128, 128, kernel_size=9, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
-            nn.MaxPool1d(kernel_size=4, stride=4)
+            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
+            nn.Conv1d(128, 32, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
+            nn.AvgPool1d(kernel_size=4, stride=4)
         )
         self.block2 = nn.Sequential(
-            nn.Conv1d(input_channels, 64, kernel_size=400, stride=50),
-            nn.BatchNorm1d(64), nn.ReLU(),
+            nn.Conv1d(input_channels, 64, kernel_size=400, stride=50), nn.ReLU(),
             nn.MaxPool1d(kernel_size=4, stride=4), nn.Dropout(dropout),
-            nn.Conv1d(64, 128, kernel_size=7, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
-            nn.Conv1d(128, 128, kernel_size=7, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
-            nn.Conv1d(128, 128, kernel_size=7, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2, stride=2)
+            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
+            nn.Conv1d(128, 32, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
+            nn.AvgPool1d(kernel_size=2, stride=2)
         )
-        self.dropout_layer = nn.Dropout(dropout)
+        self.block3 = nn.Dropout(dropout)
 
     def forward(self, X):
         batch_size, seq_length, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
@@ -39,65 +31,107 @@ class FeatureExtraction(nn.Module):
         y1 = self.block1(X)
         y2 = self.block2(X)
         y = torch.cat((y1, y2), dim=2)
+        y = self.block3(y)
         y = y.view(batch_size, seq_length, -1)
-        return self.dropout_layer(y)
+        return y
 
 
-class LSTMunit(nn.Module):
-    def __init__(self, input_size, hiddens, dropout=0.25, bidirectional=True, **kwargs):
-        super(LSTMunit, self).__init__(**kwargs)
-        self.input_size = input_size
-        self.hiddens = hiddens
-        self.block = nn.LSTM(input_size, hiddens, num_layers=2,
-                             batch_first=True, bidirectional=bidirectional, dropout=dropout)
-        self.d = 2 if bidirectional else 1
-
-    def get_initial_states(self, batch_size, device):
-        H0 = torch.zeros((self.d * 2, batch_size, self.hiddens), dtype=torch.float32, device=device)
-        C0 = torch.zeros((self.d * 2, batch_size, self.hiddens), dtype=torch.float32, device=device)
-        return H0, C0
+class FrequencyEncoder(nn.Module):
+    def __init__(self, input_channels, output_features=512, sample_rate=100, **kwargs):
+        super(FrequencyEncoder, self).__init__(**kwargs)
+        self.input_channels = input_channels
+        self.sample_rate = sample_rate
+        self.pooling = nn.AvgPool1d(kernel_size=5, stride=5)
+        self.block = nn.Sequential(
+            nn.Linear(600, output_features), nn.ReLU(),
+            nn.Linear(output_features, output_features), nn.ReLU()
+        )
 
     def forward(self, X):
-        batch_size, seq_length, features = X.shape[0], X.shape[1], X.shape[2]
-        H0, C0 = self.get_initial_states(batch_size, X.device)
-        output, (Hn, Cn) = self.block(X, (H0, C0))
+        batch_size, seq_length, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
+        X = X.view(batch_size * seq_length, num_channels, series)
+        y = torch.fft.rfft(X, dim=2)
+        y = self.pooling(torch.abs(y))
+        y = y.view(batch_size * seq_length, -1)
+        y = self.block(y)
+        y = y.view(batch_size, seq_length, -1)
+        return y
+
+
+class GRULayer(nn.Module):
+    def __init__(self, input_features, hiddens, **kwargs):
+        super(GRULayer, self).__init__(**kwargs)
+        self.input_features = input_features
+        self.hiddens = hiddens
+        self.block = nn.GRU(input_features, hiddens, batch_first=True, bidirectional=True)
+
+    def get_initial_state(self, batch_size, device):
+        return torch.zeros((2, batch_size, self.hiddens), dtype=torch.float32, device=device)
+
+    def forward(self, X):
+        H0 = self.get_initial_state(X.shape[0], X.device)
+        (output, Hn) = self.block(X, H0)
         if not output.is_contiguous():
             output = output.contiguous()
         return output
 
 
-class DeepSleepNet(nn.Module):
-    def __init__(self, dropout, input_channels=2, **kwargs):
-        super(DeepSleepNet, self).__init__(**kwargs)
-        self.dropout = dropout
+class AttentionLayer(nn.Module):
+    def __init__(self, input_features, hiddens, **kwargs):
+        super(AttentionLayer, self).__init__(**kwargs)
+        self.input_features = input_features
+        self.hiddens = hiddens
+        self.K = nn.Parameter(torch.randn((input_features, hiddens), dtype=torch.float32))
+        self.Q = nn.Parameter(torch.randn((input_features, hiddens), dtype=torch.float32))
+        self.softmax = nn.Softmax(dim=2)
+
+    def forward(self, X):
+        batch_size, seq_length, featrues = X.shape[0], X.shape[1], X.shape[2]
+        mid = (seq_length + 1) // 2
+        keys = X @ self.K
+        query = X[:, mid, :] @ self.Q
+        query = torch.unsqueeze(query, dim=2)
+        alpha = torch.bmm(keys, query) / (self.hiddens ** 0.5)
+        alpha = self.softmax(torch.transpose(alpha, 1, 2))
+        output = torch.bmm(alpha, X).squeeze(dim=1)
+        return output
+
+
+class SleepNet(nn.Module):
+    def __init__(self, input_channels, dropout, **kwargs):
+        super(SleepNet, self).__init__(**kwargs)
         self.input_channels = input_channels
-        self.feature_extraction = FeatureExtraction(input_channels, dropout)
-        self.lstm = LSTMunit(2688, 256, dropout)
-        self.resblock = nn.Linear(2688, 512)
+        self.dropout = dropout
+        self.encoder1 = RawDataEncoder(input_channels, dropout)
+        self.encoder2 = FrequencyEncoder(input_channels, 512)
+        self.gru1 = GRULayer(672, 256)
+        self.gru2 = GRULayer(512, 256)
+        self.att1 = AttentionLayer(512, 256)
+        self.att2 = AttentionLayer(512, 256)
         self.classifier = nn.Sequential(
-            nn.Linear(1024, 512),
+            nn.Linear(1024, 768),
             nn.ReLU(), nn.Dropout(dropout),
-            nn.Linear(512, 5)
+            nn.Linear(768, 5)
         )
 
     def forward(self, X):
-        batch_size, seq_length, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
-        y1 = self.feature_extraction(X)
-        y2 = self.lstm(y1).view(batch_size * seq_length, -1)
-        y3 = self.resblock(y1.view(batch_size * seq_length, -1))
-        y4 = torch.cat((y2, y3), dim=1)
-        return self.classifier(y4)
+        f1 = self.encoder1(X)
+        f1 = self.gru1(f1)
+        f1 = self.att1(f1)
+        f2 = self.encoder2(X)
+        f2 = self.gru2(f2)
+        f2 = self.att2(f2)
+        f = torch.cat((f1, f2), dim=1)
+        output = self.classifier(f)
+        return output
 
 
 def init_weight(module):
     if isinstance(module, nn.Conv1d) or isinstance(module, nn.Linear):
         nn.init.xavier_uniform_(module.weight)
-    elif hasattr(module, 'weight'):
-        nn.init.normal_(module.weight)
 
 
 if __name__ == '__main__':
-    net = DeepSleepNet(0.25)
-    X = torch.randn((4, 10, 2, 3000), dtype=torch.float32, requires_grad=False)
+    net = SleepNet(2, 0.25)
+    X = torch.randn((8, 5, 2, 3000), dtype=torch.float32)
     print(net(X).shape)
-    torch.save(net.state_dict(), 'deepSleepNet.pth')
