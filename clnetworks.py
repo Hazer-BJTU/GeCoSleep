@@ -14,7 +14,7 @@ class CLnetwork:
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         self.loss = nn.CrossEntropyLoss(reduction='none')
         self.best_train_loss, self.best_train_acc, self.best_valid_acc = 0.0, 0.0, 0.0
-        self.train_loss, self.confusion_matrix = 0.0, ConfusionMatrix(1)
+        self.train_loss, self.confusion_matrix, self.cnt = 0.0, ConfusionMatrix(1), 0
         self.best_net = None
         self.best_net_memory = []
         self.device = torch.device(f'cuda:{args.cuda_idx}')
@@ -30,7 +30,7 @@ class CLnetwork:
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, max(self.args.num_epochs // 6, 1), 0.6)
 
     def start_epoch(self):
-        self.train_loss = 0.0
+        self.train_loss, self.cnt = 0.0, 0
         self.confusion_matrix.clear()
         self.net.train()
 
@@ -38,17 +38,18 @@ class CLnetwork:
         X, y = X.to(self.device), y.to(self.device)
         self.optimizer.zero_grad()
         y_hat = self.net(X)
-        L_current = torch.sum(self.loss(y_hat, y.view(-1)))
+        L_current = torch.sum(self.loss(y_hat, y))
         L = L_current / X.shape[0]
         L.backward()
         nn.utils.clip_grad_norm_(self.net.parameters(), max_norm=20, norm_type=2)
         self.optimizer.step()
         self.train_loss += L.item()
+        self.cnt += 1
         self.confusion_matrix.count_task_separated(y_hat, y, 0)
 
     def end_epoch(self, valid_dataset):
         train_acc, train_mf1 = self.confusion_matrix.accuracy(), self.confusion_matrix.macro_f1()
-        print(f'epoch: {self.epoch}, train loss: {self.train_loss:.3f}, train accuracy: {train_acc:.3f}, '
+        print(f'epoch: {self.epoch}, train loss: {self.train_loss / self.cnt:.3f}, train accuracy: {train_acc:.3f}, '
               f"macro F1: {train_mf1:.3f}, 1000 lr: {self.optimizer.state_dict()['param_groups'][0]['lr'] * 1000:.3f}")
         if (self.epoch + 1) % self.args.valid_epoch == 0:
             print(f'validating on the datasets...')
@@ -115,7 +116,7 @@ class NaiveCLnetwork(CLnetwork):
         X, y = X.to(self.device), y.to(self.device)
         self.optimizer.zero_grad()
         y_hat = self.net(X)
-        L_current = torch.sum(self.loss(y_hat, y.view(-1)))
+        L_current = torch.sum(self.loss(y_hat, y))
         L = L_current / X.shape[0]
         replay_number = 0
         for sample in self.memory_buffer:

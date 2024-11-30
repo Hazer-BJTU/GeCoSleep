@@ -21,12 +21,12 @@ parser.add_argument('--task_names', nargs='+', default=['ISRUC1', 'SHHS', 'MASS'
                     help='the list of task names')
 parser.add_argument('--cuda_idx', type=int, nargs='?', default=0, help='device index')
 parser.add_argument('--window_size', type=int, nargs='?', default=5, help='length of sequence')
-parser.add_argument('--total_num', nargs='+', default={'ISRUC1': 20, 'SHHS': 20, 'MASS': 20, 'Sleep-EDF': 20},
+parser.add_argument('--total_num', nargs='+', default={'ISRUC1': 60, 'SHHS': 60, 'MASS': 60, 'Sleep-EDF': 60},
                     help='number of examples for each task')
-parser.add_argument('--fold_num', type=int, nargs='?', default=5, help='number of a single fold')
-parser.add_argument('--num_epochs', type=int, nargs='?', default=100, help='number of epochs')
+parser.add_argument('--fold_num', type=int, nargs='?', default=10, help='number of a single fold')
+parser.add_argument('--num_epochs', type=int, nargs='?', default=200, help='number of epochs')
 parser.add_argument('--batch_size', type=int, nargs='?', default=64, help='batch size')
-parser.add_argument('--valid_epoch', type=int, nargs='?', default=5, help='validating interval')
+parser.add_argument('--valid_epoch', type=int, nargs='?', default=10, help='validating interval')
 parser.add_argument('--valid_batch', type=int, nargs='?', default=64, help='validating batch size')
 parser.add_argument('--dropout', type=float, nargs='?', default=0.25, help='drop out value')
 parser.add_argument('--weight_decay', type=float, nargs='?', default=0, help='weight decay value')
