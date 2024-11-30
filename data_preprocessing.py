@@ -1,11 +1,11 @@
 import numpy as np
+import pickle as pkl
 import scipy.io as sio
 import torch
-from scipy import signal
 import os
+from scipy import signal
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-import pickle as pkl
 
 
 def load_data_isruc1(filepath, window_size, channels, total_num):
@@ -33,14 +33,17 @@ def load_data_isruc1(filepath, window_size, channels, total_num):
         label_name = file.split('.')[0][7:] + '_1.npy'
         label = np.load(os.path.join(filepath, 'label', label_name))
         y = torch.tensor(label, dtype=torch.int64, requires_grad=False)
-        data_seq, label_seq, segs = [], [], X.shape[0] // window_size
-        for idx in range(segs):
-            data_seq.append(X[idx * window_size: (idx + 1) * window_size])
-            label_seq.append(y[idx * window_size: (idx + 1) * window_size])
+        assert window_size % 2 == 1, 'window size must be an odd number'
+        data_seq, label_seq, context = [], [], window_size // 2
+        padding = torch.zeros((context, X.shape[1], X.shape[2]), dtype=torch.float32, requires_grad=False)
+        X = torch.cat((padding, X, padding), dim=0)
+        for idx in range(context, X.shape[0] - context):
+            data_seq.append(X[idx - context: idx + context + 1])
+            label_seq.append(y[idx - context])
         datas.append(data_seq)
         labels.append(label_seq)
         if len(datas) >= total_num:
-            print('safe data loaded...')
+            print('sufficient data loaded...')
             break
     return datas, labels
 
@@ -75,14 +78,17 @@ def load_data_shhs(filepath, window_size, channels, total_num):
                 temp = torch.unsqueeze(torch.tensor(series, dtype=torch.float32, requires_grad=False), dim=1)
                 X = torch.cat((X, temp), dim=1)
         y = torch.tensor(raw_data['stage_label'], dtype=torch.int64, requires_grad=False)
-        data_seq, label_seq, segs = [], [], X.shape[0] // window_size
-        for idx in range(segs):
-            data_seq.append(X[idx * window_size: (idx + 1) * window_size])
-            label_seq.append(y[idx * window_size: (idx + 1) * window_size])
+        assert window_size % 2 == 1, 'window size must be an odd number'
+        data_seq, label_seq, context = [], [], window_size // 2
+        padding = torch.zeros((context, X.shape[1], X.shape[2]), dtype=torch.float32, requires_grad=False)
+        X = torch.cat((padding, X, padding), dim=0)
+        for idx in range(context, X.shape[0] - context):
+            data_seq.append(X[idx - context: idx + context + 1])
+            label_seq.append(y[idx - context])
         datas.append(data_seq)
         labels.append(label_seq)
         if len(datas) >= total_num:
-            print('safe data loaded...')
+            print('sufficient data loaded...')
             break
     return datas, labels
 
@@ -118,14 +124,17 @@ def load_data_mass(filepath, window_size, channels, total_num):
         stage_label = sio.loadmat(os.path.join(filepath, label_name))['label']
         stage_label = np.argmax(stage_label, axis=1)
         y = torch.tensor(stage_label, dtype=torch.int64, requires_grad=False)
-        data_seq, label_seq, segs = [], [], X.shape[0] // window_size
-        for idx in range(segs):
-            data_seq.append(X[idx * window_size: (idx + 1) * window_size])
-            label_seq.append(y[idx * window_size: (idx + 1) * window_size])
+        assert window_size % 2 == 1, 'window size must be an odd number'
+        data_seq, label_seq, context = [], [], window_size // 2
+        padding = torch.zeros((context, X.shape[1], X.shape[2]), dtype=torch.float32, requires_grad=False)
+        X = torch.cat((padding, X, padding), dim=0)
+        for idx in range(context, X.shape[0] - context):
+            data_seq.append(X[idx - context: idx + context + 1])
+            label_seq.append(y[idx - context])
         datas.append(data_seq)
         labels.append(label_seq)
         if len(datas) >= total_num:
-            print('safe data loaded...')
+            print('sufficient data loaded...')
             break
     return datas, labels
 
@@ -161,14 +170,17 @@ def load_data_sleepedf(filepath, window_size, channels, total_num):
                 temp = torch.unsqueeze(torch.tensor(series, dtype=torch.float32, requires_grad=False), dim=1)
                 X = torch.cat((X, temp), dim=1)
         y = torch.tensor(npz_file['y'], dtype=torch.int64, requires_grad=False)
-        data_seq, label_seq, segs = [], [], X.shape[0] // window_size
-        for idx in range(segs):
-            data_seq.append(X[idx * window_size: (idx + 1) * window_size])
-            label_seq.append(y[idx * window_size: (idx + 1) * window_size])
+        assert window_size % 2 == 1, 'window size must be an odd number'
+        data_seq, label_seq, context = [], [], window_size // 2
+        padding = torch.zeros((context, X.shape[1], X.shape[2]), dtype=torch.float32, requires_grad=False)
+        X = torch.cat((padding, X, padding), dim=0)
+        for idx in range(context, X.shape[0] - context):
+            data_seq.append(X[idx - context: idx + context + 1])
+            label_seq.append(y[idx - context])
         datas.append(data_seq)
         labels.append(label_seq)
         if len(datas) >= total_num:
-            print('safe data loaded...')
+            print('sufficient data loaded...')
             break
     return datas, labels
 
@@ -212,9 +224,9 @@ def create_fold(train, valid, test, datas_tasklist, labels_tasklist):
                 test_label.append(y)
                 test_task.append(t)
         t += 1
-    train_dataset = DataWrapper(train_data, train_label, train_task)
-    valid_dataset = DataWrapper(valid_data, valid_label, valid_task)
-    test_dataset = DataWrapper(test_data, test_label, test_task)
+    train_dataset = DataWrapper(train_data, train_label)
+    valid_dataset = DataWrapper(valid_data, valid_label)
+    test_dataset = DataWrapper(test_data, test_label)
     return train_dataset, valid_dataset, test_dataset
 
 
@@ -247,27 +259,42 @@ def create_fold_task_separated(train, valid, test, datas_tasklist, labels_taskli
 
 
 def load_all_datasets(args):
-    datas_isruc1, labels_isruc1 = load_data_isruc1(args.isruc1_path, args.window_size, args.isruc1, args.total_num[0])
-    datas_shhs, labels_shhs = load_data_shhs(args.shhs_path, args.window_size, args.shhs, args.total_num[1])
-    datas_mass, labels_mass = load_data_mass(args.mass_path, args.window_size, args.mass, args.total_num[2])
-    datas_sleep, labels_sleep = load_data_sleepedf(args.sleep_edf_path, args.window_size, args.sleep_edf, args.total_num[3])
-    datas = [datas_isruc1, datas_shhs, datas_mass, datas_sleep]
-    labels = [labels_isruc1, labels_shhs, labels_mass, labels_sleep]
+    datas, labels = [], []
+    for task_name in args.task_names:
+        if task_name == 'ISRUC1':
+            task_data, task_label = load_data_isruc1(args.isruc1_path, args.window_size, args.isruc1, args.total_num['ISRUC1'])
+            datas.append(task_data)
+            labels.append(task_label)
+        elif task_name == 'SHHS':
+            task_data, task_label = load_data_shhs(args.shhs_path, args.window_size, args.shhs, args.total_num['SHHS'])
+            datas.append(task_data)
+            labels.append(task_label)
+        elif task_name == 'MASS':
+            task_data, task_label = load_data_mass(args.mass_path, args.window_size, args.mass, args.total_num['MASS'])
+            datas.append(task_data)
+            labels.append(task_label)
+        elif task_name == 'Sleep-EDF':
+            task_data, task_label = load_data_sleepedf(args.sleep_edf_path, args.window_size, args.sleep_edf, args.total_num['Sleep-EDF'])
+            datas.append(task_data)
+            labels.append(task_label)
     return datas, labels
 
 
 if __name__ == '__main__':
-    datas, labels = load_data_sleepedf('/home/ShareData/sleep-edf-153-3chs', 10, ['Fpz-Cz', 'EOG'], 5)
+    '''
+    datas, labels = load_data_sleepedf('/home/ShareData/sleep-edf-153-3chs', 5, ['Fpz-Cz', 'EOG'], 5)
     train, valid, test = create_fold([0, 1, 2], [3], [4], [datas, datas, datas], [labels, labels, labels])
     train_loader = DataLoader(train, batch_size=32, shuffle=False)
     valid_loader = DataLoader(valid, batch_size=8, shuffle=False)
     test_loader = DataLoader(test, batch_size=8, shuffle=False)
     print('train loader...')
-    for X, y, t in train_loader:
-        print(f'{X.shape}, {y.shape}, {t}')
+    for X, y in train_loader:
+        print(f'{X.shape}, {y.shape}')
     print('valid loader...')
-    for X, y, t in valid_loader:
-        print(f'{X.shape}, {y.shape}, {t}')
+    for X, y in valid_loader:
+        print(f'{X.shape}, {y.shape}')
     print('test loader...')
-    for X, y, t in test_loader:
-        print(f'{X.shape}, {y.shape}, {t}')
+    for X, y in test_loader:
+        print(f'{X.shape}, {y.shape}')
+    '''
+    pass

@@ -22,7 +22,7 @@ parser.add_argument('--task_names', nargs='+', default=['ISRUC1', 'SHHS', 'MASS'
 parser.add_argument('--cuda_idx', type=int, nargs='?', default=0, help='device index')
 parser.add_argument('--window_size', type=int, nargs='?', default=10, help='length of sequence')
 parser.add_argument('--total_num', nargs='+', default=[100, 200, 60, 150], help='number of examples for each task')
-parser.add_argument('--fold_num', type=int, nargs='?', default=10, help='number of a single fold')
+parser.add_argument('--fold_num', type=int, nargs='?', default=10, help='number of a folds')
 parser.add_argument('--num_epochs', type=int, nargs='?', default=200, help='number of epochs')
 parser.add_argument('--batch_size', type=int, nargs='?', default=256, help='batch size')
 parser.add_argument('--valid_epoch', type=int, nargs='?', default=10, help='validating interval')
