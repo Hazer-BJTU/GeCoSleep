@@ -12,7 +12,7 @@ class RawDataEncoder(nn.Module):
             nn.MaxPool1d(kernel_size=8, stride=8), nn.Dropout(dropout),
             nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
             nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
-            nn.Conv1d(128, 32, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
             nn.AvgPool1d(kernel_size=4, stride=4)
         )
         self.block2 = nn.Sequential(
@@ -20,7 +20,7 @@ class RawDataEncoder(nn.Module):
             nn.MaxPool1d(kernel_size=4, stride=4), nn.Dropout(dropout),
             nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
             nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
-            nn.Conv1d(128, 32, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
             nn.AvgPool1d(kernel_size=2, stride=2)
         )
         self.block3 = nn.Dropout(dropout)
@@ -43,11 +43,9 @@ class FrequencyEncoder(nn.Module):
         self.dropout = dropout
         self.output_features = output_features
         self.sample_rate = sample_rate
-        self.pooling = nn.AvgPool1d(kernel_size=5, stride=5)
+        self.pooling = nn.AvgPool1d(kernel_size=2, stride=2)
         self.block = nn.Sequential(
-            nn.Linear(600, output_features),
-            nn.ReLU(), nn.Dropout(dropout),
-            nn.Linear(output_features, output_features),
+            nn.Linear(1500, output_features),
             nn.ReLU(), nn.Dropout(dropout)
         )
 
@@ -86,13 +84,13 @@ class SleepNet(nn.Module):
         self.input_channels = input_channels
         self.dropout = dropout
         self.encoder1 = RawDataEncoder(input_channels, dropout)
-        self.encoder2 = FrequencyEncoder(input_channels, dropout, 512)
-        self.gru1 = GRULayer(672, 256)
-        self.gru2 = GRULayer(512, 256)
+        self.encoder2 = FrequencyEncoder(input_channels, dropout, 1024)
+        self.gru1 = GRULayer(2688, 256)
+        self.gru2 = GRULayer(1024, 256)
         self.classifier = nn.Sequential(
-            nn.Linear(1024, 512),
+            nn.Linear(1024, 768),
             nn.ReLU(), nn.Dropout(dropout),
-            nn.Linear(512, 5)
+            nn.Linear(768, 5)
         )
 
     def forward(self, X):
