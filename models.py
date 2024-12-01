@@ -86,18 +86,23 @@ class AttentionLayer(nn.Module):
         self.input_features = input_features
         self.hiddens = hiddens
         self.K = nn.Parameter(torch.randn((input_features, hiddens), dtype=torch.float32))
+        self.norm1 = nn.LayerNorm(hiddens)
         self.Q = nn.Parameter(torch.randn((input_features, hiddens), dtype=torch.float32))
+        self.norm2 = nn.LayerNorm(hiddens)
+        self.V = nn.Parameter(torch.randn((input_features, input_features), dtype=torch.float32))
+        self.bias = nn.Parameter(torch.randn(input_features, dtype=torch.float32))
+        self.norm3 = nn.LayerNorm(input_features)
         self.softmax = nn.Softmax(dim=2)
 
     def forward(self, X):
         batch_size, seq_length, featrues = X.shape[0], X.shape[1], X.shape[2]
         mid = (seq_length + 1) // 2
-        keys = X @ self.K
-        query = X[:, mid, :] @ self.Q
-        query = torch.unsqueeze(query, dim=2)
-        alpha = torch.bmm(keys, query) / (self.hiddens ** 0.5)
-        alpha = self.softmax(torch.transpose(alpha, 1, 2))
-        output = torch.bmm(alpha, X).squeeze(dim=1)
+        keys = self.norm1(X @ self.K)
+        query = self.norm2(torch.unsqueeze(X[:, mid, :], dim=1) @ self.Q)
+        values = self.norm3(X @ self.V + self.bias)
+        alpha = torch.bmm(query, torch.transpose(keys, 1, 2)) / self.hiddens
+        alpha = self.softmax(alpha)
+        output = torch.bmm(alpha, values).squeeze(dim=1)
         return output
 
 
@@ -108,21 +113,25 @@ class SleepNet(nn.Module):
         self.dropout = dropout
         self.encoder1 = RawDataEncoder(input_channels, dropout)
         self.encoder2 = FrequencyEncoder(input_channels, dropout, 512)
+        self.norm1 = nn.LayerNorm(672)
+        self.norm2 = nn.LayerNorm(512)
         self.gru1 = GRULayer(672, 256)
         self.gru2 = GRULayer(512, 256)
         self.att1 = AttentionLayer(512, 256)
         self.att2 = AttentionLayer(512, 256)
         self.classifier = nn.Sequential(
-            nn.Linear(1024, 768),
+            nn.Linear(1024, 512),
             nn.ReLU(), nn.Dropout(dropout),
-            nn.Linear(768, 5)
+            nn.Linear(512, 5)
         )
 
     def forward(self, X):
         f1 = self.encoder1(X)
+        f1 = self.norm1(f1)
         f1 = self.gru1(f1)
         f1 = self.att1(f1)
         f2 = self.encoder2(X)
+        f2 = self.norm2(f2)
         f2 = self.gru2(f2)
         f2 = self.att2(f2)
         f = torch.cat((f1, f2), dim=1)

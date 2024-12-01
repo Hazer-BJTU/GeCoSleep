@@ -21,11 +21,9 @@ class CLnetwork:
         self.net.to(self.device)
         self.epoch = 0
         self.task = 0
-        self.label_cnt = torch.zeros(5, dtype=torch.float32, device=self.device)
 
     def start_task(self):
         self.epoch = 0
-        self.label_cnt.fill_(0)
         self.best_net = copy.deepcopy(self.net)
         self.best_train_loss, self.best_train_acc, self.best_valid_acc = 0.0, 0.0, 0.0
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
@@ -38,16 +36,9 @@ class CLnetwork:
 
     def observe(self, X, y, first_time=False):
         X, y = X.to(self.device), y.to(self.device)
-        if random.random() < 0.25:
-            noise = torch.randn_like(X) * torch.std(X) * self.args.noise_rate
-            X = X + noise
-        if first_time:
-            self.label_cnt += torch.bincount(y, minlength=5)
         self.optimizer.zero_grad()
         y_hat = self.net(X)
         L_current = self.loss(y_hat, y)
-        loss_coef = self.label_cnt / (torch.max(self.label_cnt) + 1)
-        L_current = L_current / loss_coef[y]
         L = torch.mean(L_current)
         L.backward()
         nn.utils.clip_grad_norm_(self.net.parameters(), max_norm=20, norm_type=2)
