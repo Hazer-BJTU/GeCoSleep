@@ -20,17 +20,17 @@ parser.add_argument('--task_num', type=int, nargs='?', default=4, help='number o
 parser.add_argument('--task_names', nargs='+', default=['ISRUC1', 'SHHS', 'MASS', 'Sleep-EDF'],
                     help='the list of task names')
 parser.add_argument('--cuda_idx', type=int, nargs='?', default=0, help='device index')
-parser.add_argument('--window_size', type=int, nargs='?', default=5, help='length of sequence')
-parser.add_argument('--total_num', nargs='+', default={'ISRUC1': 60, 'SHHS': 60, 'MASS': 60, 'Sleep-EDF': 60},
+parser.add_argument('--window_size', type=int, nargs='?', default=10, help='length of sequence')
+parser.add_argument('--total_num', nargs='+', default={'ISRUC1': 100, 'SHHS': 200, 'MASS': 60, 'Sleep-EDF': 150},
                     help='number of examples for each task')
 parser.add_argument('--fold_num', type=int, nargs='?', default=10, help='number of a single fold')
-parser.add_argument('--num_epochs', type=int, nargs='?', default=200, help='number of epochs')
+parser.add_argument('--num_epochs', type=int, nargs='?', default=100, help='number of epochs')
 parser.add_argument('--batch_size', type=int, nargs='?', default=64, help='batch size')
-parser.add_argument('--valid_epoch', type=int, nargs='?', default=10, help='validating interval')
+parser.add_argument('--valid_epoch', type=int, nargs='?', default=3, help='validating interval')
 parser.add_argument('--valid_batch', type=int, nargs='?', default=64, help='validating batch size')
-parser.add_argument('--dropout', type=float, nargs='?', default=0.5, help='drop out ratio')
-parser.add_argument('--weight_decay', type=float, nargs='?', default=1e-5, help='weight decay value')
-parser.add_argument('--lr', type=float, nargs='?', default=1e-3, help='learning rate')
+parser.add_argument('--dropout', type=float, nargs='?', default=0.25, help='drop out ratio')
+parser.add_argument('--weight_decay', type=float, nargs='?', default=0, help='weight decay value')
+parser.add_argument('--lr', type=float, nargs='?', default=2e-4, help='learning rate')
 parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='continual learning strategy')
 args = parser.parse_args()
 

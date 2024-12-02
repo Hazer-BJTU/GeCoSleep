@@ -8,19 +8,27 @@ class RawDataEncoder(nn.Module):
         self.input_channels = input_channels
         self.dropout = dropout
         self.block1 = nn.Sequential(
-            nn.Conv1d(input_channels, 64, kernel_size=50, stride=6), nn.ReLU(),
+            nn.Conv1d(input_channels, 64, kernel_size=50, stride=6),
+            nn.BatchNorm1d(64), nn.ReLU(),
             nn.MaxPool1d(kernel_size=8, stride=8), nn.Dropout(dropout),
-            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
+            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'),
+            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
+            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
+            nn.BatchNorm1d(128), nn.ReLU(),
             nn.AvgPool1d(kernel_size=4, stride=4)
         )
         self.block2 = nn.Sequential(
-            nn.Conv1d(input_channels, 64, kernel_size=400, stride=50), nn.ReLU(),
+            nn.Conv1d(input_channels, 64, kernel_size=400, stride=50),
+            nn.BatchNorm1d(64), nn.ReLU(),
             nn.MaxPool1d(kernel_size=4, stride=4), nn.Dropout(dropout),
-            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'), nn.ReLU(),
+            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'),
+            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
+            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
+            nn.BatchNorm1d(128), nn.ReLU(),
             nn.AvgPool1d(kernel_size=2, stride=2)
         )
         self.block3 = nn.Dropout(dropout)
@@ -37,27 +45,68 @@ class RawDataEncoder(nn.Module):
 
 
 class FrequencyEncoder(nn.Module):
-    def __init__(self, input_channels, dropout, output_features=512, sample_rate=100, **kwargs):
+    def __init__(self, input_channels, dropout, sample_rate=100, **kwargs):
         super(FrequencyEncoder, self).__init__(**kwargs)
         self.input_channels = input_channels
         self.dropout = dropout
-        self.output_features = output_features
         self.sample_rate = sample_rate
-        self.pooling = nn.AvgPool1d(kernel_size=2, stride=2)
         self.block = nn.Sequential(
-            nn.Linear(1500, output_features),
-            nn.ReLU(), nn.Dropout(dropout)
+            nn.Conv1d(input_channels + 1, 64, kernel_size=5, stride=5),
+            nn.BatchNorm1d(64), nn.ReLU(),
+            nn.MaxPool1d(kernel_size=8, stride=8), nn.Dropout(dropout),
+            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'),
+            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
+            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
+            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.AvgPool1d(kernel_size=4, stride=4), nn.Dropout(dropout)
         )
 
     def forward(self, X):
         batch_size, seq_length, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
         X = X.view(batch_size * seq_length, num_channels, series)
-        y = torch.fft.rfft(X, dim=2)
-        y = self.pooling(torch.abs(y))
-        y = y.view(batch_size * seq_length, -1)
+        y = torch.abs(torch.fft.rfft(X, dim=2))
+        freq = torch.fft.rfftfreq(series, 1 / self.sample_rate).expand(y.shape[0], 1, y.shape[2])
+        y = torch.cat((y, freq), dim=1)
         y = self.block(y)
         y = y.view(batch_size, seq_length, -1)
         return y
+
+
+class AttentionLayer(nn.Module):
+    def __init__(self, input_feature1, input_feaure2, hiddens, dropout, **kwargs):
+        super(AttentionLayer, self).__init__(**kwargs)
+        self.V1 = nn.Sequential(
+            nn.Linear(input_feature1, hiddens),
+            nn.LayerNorm(hiddens), nn.Dropout(dropout)
+        )
+        self.K1 = nn.Sequential(
+            nn.Linear(input_feature1, hiddens),
+            nn.LayerNorm(hiddens), nn.Dropout(dropout)
+        )
+        self.V2 = nn.Sequential(
+            nn.Linear(input_feaure2, hiddens),
+            nn.LayerNorm(hiddens), nn.Dropout(dropout)
+        )
+        self.K2 = nn.Sequential(
+            nn.Linear(input_feaure2, hiddens),
+            nn.LayerNorm(hiddens), nn.Dropout(dropout)
+        )
+        self.Q = nn.Sequential(
+            nn.Linear(hiddens, 1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, X1, X2):
+        batch_size, seq_length = X1.shape[0], X1.shape[1]
+        X1, X2 = X1.view(batch_size * seq_length, -1), X2.view(batch_size * seq_length, -1)
+        v1, k1 = self.V1(X1), self.K1(X1)
+        v2, k2 = self.V2(X2), self.K2(X2)
+        c1, c2 = self.Q(k1), self.Q(k2)
+        output = c1 * v1 + v2 * v2
+        output = output.view(batch_size, seq_length, -1)
+        return output
 
 
 class GRULayer(nn.Module):
@@ -84,22 +133,21 @@ class SleepNet(nn.Module):
         self.input_channels = input_channels
         self.dropout = dropout
         self.encoder1 = RawDataEncoder(input_channels, dropout)
-        self.encoder2 = FrequencyEncoder(input_channels, dropout, 1024)
-        self.gru1 = GRULayer(2688, 256)
-        self.gru2 = GRULayer(1024, 256)
+        self.encoder2 = FrequencyEncoder(input_channels, dropout)
+        self.attention = AttentionLayer(2688, 1152, 512, dropout)
+        self.gru = GRULayer(512, 512)
         self.classifier = nn.Sequential(
-            nn.Linear(1024, 768),
+            nn.Linear(1024, 512),
             nn.ReLU(), nn.Dropout(dropout),
-            nn.Linear(768, 5)
+            nn.Linear(512, 5)
         )
 
     def forward(self, X):
         batch_size, seq_length, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
         f1 = self.encoder1(X)
-        f1 = self.gru1(f1)
         f2 = self.encoder2(X)
-        f2 = self.gru2(f2)
-        f = torch.cat((f1, f2), dim=2)
+        f = self.attention(f1, f2)
+        f = self.gru(f)
         f = f.view(batch_size * seq_length, -1)
         output = self.classifier(f)
         return output
@@ -111,7 +159,6 @@ def init_weight(module):
 
 
 if __name__ == '__main__':
-    net = SleepNet(2, 0.25)
-    X = torch.randn((8, 10, 2, 3000), dtype=torch.float32)
+    X = torch.randn((4, 10, 2, 3000))
+    net = SleepNet(2, 0.5)
     print(net(X).shape)
-    torch.save(net.state_dict(), 'MSleepNet.pth')
