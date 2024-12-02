@@ -67,7 +67,7 @@ class FrequencyEncoder(nn.Module):
         batch_size, seq_length, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
         X = X.view(batch_size * seq_length, num_channels, series)
         y = torch.abs(torch.fft.rfft(X, dim=2))
-        freq = torch.fft.rfftfreq(series, 1 / self.sample_rate).expand(y.shape[0], 1, y.shape[2])
+        freq = torch.fft.rfftfreq(series, 1 / self.sample_rate).expand(y.shape[0], 1, y.shape[2]).to(y.device)
         y = torch.cat((y, freq), dim=1)
         y = self.block(y)
         y = y.view(batch_size, seq_length, -1)
@@ -75,23 +75,23 @@ class FrequencyEncoder(nn.Module):
 
 
 class AttentionLayer(nn.Module):
-    def __init__(self, input_feature1, input_feaure2, hiddens, dropout, **kwargs):
+    def __init__(self, input_feature1, input_feaure2, hiddens, **kwargs):
         super(AttentionLayer, self).__init__(**kwargs)
         self.V1 = nn.Sequential(
             nn.Linear(input_feature1, hiddens),
-            nn.LayerNorm(hiddens), nn.Dropout(dropout)
+            nn.LayerNorm(hiddens)
         )
         self.K1 = nn.Sequential(
             nn.Linear(input_feature1, hiddens),
-            nn.LayerNorm(hiddens), nn.Dropout(dropout)
+            nn.LayerNorm(hiddens)
         )
         self.V2 = nn.Sequential(
             nn.Linear(input_feaure2, hiddens),
-            nn.LayerNorm(hiddens), nn.Dropout(dropout)
+            nn.LayerNorm(hiddens)
         )
         self.K2 = nn.Sequential(
             nn.Linear(input_feaure2, hiddens),
-            nn.LayerNorm(hiddens), nn.Dropout(dropout)
+            nn.LayerNorm(hiddens)
         )
         self.Q = nn.Sequential(
             nn.Linear(hiddens, 1),
@@ -104,7 +104,7 @@ class AttentionLayer(nn.Module):
         v1, k1 = self.V1(X1), self.K1(X1)
         v2, k2 = self.V2(X2), self.K2(X2)
         c1, c2 = self.Q(k1), self.Q(k2)
-        output = c1 * v1 + v2 * v2
+        output = c1 * v1 + c2 * v2
         output = output.view(batch_size, seq_length, -1)
         return output
 
@@ -134,8 +134,12 @@ class SleepNet(nn.Module):
         self.dropout = dropout
         self.encoder1 = RawDataEncoder(input_channels, dropout)
         self.encoder2 = FrequencyEncoder(input_channels, dropout)
-        self.attention = AttentionLayer(2688, 1152, 512, dropout)
-        self.gru = GRULayer(512, 512)
+        self.attention = AttentionLayer(2688, 1152, 512)
+        self.resblock = nn.Sequential(
+            nn.Linear(512, 512),
+            nn.ReLU()
+        )
+        self.gru = GRULayer(512, 256)
         self.classifier = nn.Sequential(
             nn.Linear(1024, 512),
             nn.ReLU(), nn.Dropout(dropout),
@@ -147,8 +151,9 @@ class SleepNet(nn.Module):
         f1 = self.encoder1(X)
         f2 = self.encoder2(X)
         f = self.attention(f1, f2)
-        f = self.gru(f)
-        f = f.view(batch_size * seq_length, -1)
+        r = self.resblock(f.view(batch_size * seq_length, -1))
+        f = self.gru(f).view(batch_size * seq_length, -1)
+        f = torch.cat((f, r), dim=1)
         output = self.classifier(f)
         return output
 
@@ -162,3 +167,4 @@ if __name__ == '__main__':
     X = torch.randn((4, 10, 2, 3000))
     net = SleepNet(2, 0.5)
     print(net(X).shape)
+    torch.save(net.state_dict(), 'MSleepNet.pth')
