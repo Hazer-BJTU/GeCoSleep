@@ -30,7 +30,7 @@ parser.add_argument('--valid_epoch', type=int, nargs='?', default=10, help='vali
 parser.add_argument('--valid_batch', type=int, nargs='?', default=64, help='validating batch size')
 parser.add_argument('--dropout', type=float, nargs='?', default=0.5, help='drop out ratio')
 parser.add_argument('--weight_decay', type=float, nargs='?', default=1e-5, help='weight decay value')
-parser.add_argument('--lr', type=float, nargs='?', default=1e-4, help='learning rate')
+parser.add_argument('--lr', type=float, nargs='?', default=2e-4, help='learning rate')
 parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='continual learning strategy')
 args = parser.parse_args()
 

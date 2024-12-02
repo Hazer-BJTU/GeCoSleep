@@ -95,7 +95,7 @@ class AttentionLayer(nn.Module):
         )
         self.Q = nn.Sequential(
             nn.Linear(hiddens, 1),
-            nn.Sigmoid()
+            nn.Softplus()
         )
 
     def forward(self, X1, X2):
@@ -104,7 +104,8 @@ class AttentionLayer(nn.Module):
         v1, k1 = self.V1(X1), self.K1(X1)
         v2, k2 = self.V2(X2), self.K2(X2)
         c1, c2 = self.Q(k1), self.Q(k2)
-        output = c1 * v1 + c2 * v2
+        c = (c1 + c2).detach()
+        output = (c1 * v1 + c2 * v2) / c
         output = output.view(batch_size, seq_length, -1)
         return output
 
