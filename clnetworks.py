@@ -25,7 +25,9 @@ class CLnetwork:
 
     def start_task(self):
         self.epoch = 0
-        self.best_net = copy.deepcopy(self.net)
+        if self.task > 0:
+            self.net.load_state_dict(torch.load(self.best_net_memory[-1], map_location=self.device, weights_only=True))
+        self.best_net = None
         self.label_cnt = torch.zeros(5, dtype=torch.float32, device=self.device, requires_grad=False)
         self.best_train_loss, self.best_train_acc, self.best_valid_acc = 0.0, 0.0, 0.0
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
@@ -38,14 +40,9 @@ class CLnetwork:
 
     def observe(self, X, y, first_time=False):
         X, y = X.to(self.device), y.to(self.device)
-        if first_time:
-            self.label_cnt += torch.bincount(y.view(-1), minlength=5)
         self.optimizer.zero_grad()
         y_hat = self.net(X)
         L_current = self.loss(y_hat, y.view(-1))
-        if not first_time:
-            loss_coef = self.label_cnt / (torch.max(self.label_cnt) + 1)
-            L_current = L_current / loss_coef[y.view(-1)]
         L = torch.mean(L_current)
         L.backward()
         nn.utils.clip_grad_norm_(self.net.parameters(), max_norm=20, norm_type=2)
@@ -65,10 +62,10 @@ class CLnetwork:
                                              self.device, self.args.valid_batch)
             valid_acc, valid_mf1 = valid_confusion.accuracy(), valid_confusion.macro_f1()
             print(f'valid accuracy: {valid_acc:.3f}, valid macro F1: {valid_mf1:.3f}')
-            if valid_acc > self.best_valid_acc:
+            if valid_acc + valid_mf1 > self.best_valid_acc:
                 self.best_train_loss = self.train_loss
                 self.best_train_acc = train_acc
-                self.best_valid_acc = valid_acc
+                self.best_valid_acc = valid_acc + valid_mf1
                 self.best_net = './modelsaved/' + str(self.args.replay_mode) + '_task' + str(self.task) + '.pth'
                 torch.save(self.net.state_dict(), self.best_net)
         self.epoch += 1
