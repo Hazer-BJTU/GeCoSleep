@@ -18,6 +18,7 @@ class ConfusionMatrix:
 
     def count_task_separated(self, y_hat, y, t):
         y_hat = torch.argmax(y_hat, dim=1)
+        y = y.view(-1)
         for idx in range(y.shape[0]):
             self.mat[t][y_hat[idx]][y[idx]] += 1
 

@@ -33,13 +33,10 @@ def load_data_isruc1(filepath, window_size, channels, total_num):
         label_name = file.split('.')[0][7:] + '_1.npy'
         label = np.load(os.path.join(filepath, 'label', label_name))
         y = torch.tensor(label, dtype=torch.int64, requires_grad=False)
-        assert window_size % 2 == 1, 'window size must be an odd number'
-        data_seq, label_seq, context = [], [], window_size // 2
-        padding = torch.zeros((context, X.shape[1], X.shape[2]), dtype=torch.float32, requires_grad=False)
-        X = torch.cat((padding, X, padding), dim=0)
-        for idx in range(context, X.shape[0] - context):
-            data_seq.append(X[idx - context: idx + context + 1])
-            label_seq.append(y[idx - context])
+        data_seq, label_seq, segs = [], [], X.shape[0] // window_size
+        for idx in range(segs):
+            data_seq.append(X[idx * window_size: (idx + 1) * window_size])
+            label_seq.append(y[idx * window_size: (idx + 1) * window_size])
         datas.append(data_seq)
         labels.append(label_seq)
         if len(datas) >= total_num:
@@ -78,13 +75,10 @@ def load_data_shhs(filepath, window_size, channels, total_num):
                 temp = torch.unsqueeze(torch.tensor(series, dtype=torch.float32, requires_grad=False), dim=1)
                 X = torch.cat((X, temp), dim=1)
         y = torch.tensor(raw_data['stage_label'], dtype=torch.int64, requires_grad=False)
-        assert window_size % 2 == 1, 'window size must be an odd number'
-        data_seq, label_seq, context = [], [], window_size // 2
-        padding = torch.zeros((context, X.shape[1], X.shape[2]), dtype=torch.float32, requires_grad=False)
-        X = torch.cat((padding, X, padding), dim=0)
-        for idx in range(context, X.shape[0] - context):
-            data_seq.append(X[idx - context: idx + context + 1])
-            label_seq.append(y[idx - context])
+        data_seq, label_seq, segs = [], [], X.shape[0] // window_size
+        for idx in range(segs):
+            data_seq.append(X[idx * window_size: (idx + 1) * window_size])
+            label_seq.append(y[idx * window_size: (idx + 1) * window_size])
         datas.append(data_seq)
         labels.append(label_seq)
         if len(datas) >= total_num:
@@ -124,13 +118,10 @@ def load_data_mass(filepath, window_size, channels, total_num):
         stage_label = sio.loadmat(os.path.join(filepath, label_name))['label']
         stage_label = np.argmax(stage_label, axis=1)
         y = torch.tensor(stage_label, dtype=torch.int64, requires_grad=False)
-        assert window_size % 2 == 1, 'window size must be an odd number'
-        data_seq, label_seq, context = [], [], window_size // 2
-        padding = torch.zeros((context, X.shape[1], X.shape[2]), dtype=torch.float32, requires_grad=False)
-        X = torch.cat((padding, X, padding), dim=0)
-        for idx in range(context, X.shape[0] - context):
-            data_seq.append(X[idx - context: idx + context + 1])
-            label_seq.append(y[idx - context])
+        data_seq, label_seq, segs = [], [], X.shape[0] // window_size
+        for idx in range(segs):
+            data_seq.append(X[idx * window_size: (idx + 1) * window_size])
+            label_seq.append(y[idx * window_size: (idx + 1) * window_size])
         datas.append(data_seq)
         labels.append(label_seq)
         if len(datas) >= total_num:
@@ -170,13 +161,10 @@ def load_data_sleepedf(filepath, window_size, channels, total_num):
                 temp = torch.unsqueeze(torch.tensor(series, dtype=torch.float32, requires_grad=False), dim=1)
                 X = torch.cat((X, temp), dim=1)
         y = torch.tensor(npz_file['y'], dtype=torch.int64, requires_grad=False)
-        assert window_size % 2 == 1, 'window size must be an odd number'
-        data_seq, label_seq, context = [], [], window_size // 2
-        padding = torch.zeros((context, X.shape[1], X.shape[2]), dtype=torch.float32, requires_grad=False)
-        X = torch.cat((padding, X, padding), dim=0)
-        for idx in range(context, X.shape[0] - context):
-            data_seq.append(X[idx - context: idx + context + 1])
-            label_seq.append(y[idx - context])
+        data_seq, label_seq, segs = [], [], X.shape[0] // window_size
+        for idx in range(segs):
+            data_seq.append(X[idx * window_size: (idx + 1) * window_size])
+            label_seq.append(y[idx * window_size: (idx + 1) * window_size])
         datas.append(data_seq)
         labels.append(label_seq)
         if len(datas) >= total_num:

@@ -95,14 +95,12 @@ class SleepNet(nn.Module):
 
     def forward(self, X):
         batch_size, seq_length, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
-        mid = (seq_length + 1) // 2
         f1 = self.encoder1(X)
         f1 = self.gru1(f1)
-        f1 = f1[:, mid, :]
         f2 = self.encoder2(X)
         f2 = self.gru2(f2)
-        f2 = f2[:, mid, :]
-        f = torch.cat((f1, f2), dim=1)
+        f = torch.cat((f1, f2), dim=2)
+        f = f.view(batch_size * seq_length, -1)
         output = self.classifier(f)
         return output
 
@@ -114,6 +112,6 @@ def init_weight(module):
 
 if __name__ == '__main__':
     net = SleepNet(2, 0.25)
-    X = torch.randn((8, 5, 2, 3000), dtype=torch.float32)
+    X = torch.randn((8, 10, 2, 3000), dtype=torch.float32)
     print(net(X).shape)
     torch.save(net.state_dict(), 'MSleepNet.pth')
