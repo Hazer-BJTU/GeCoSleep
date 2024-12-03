@@ -75,37 +75,29 @@ class FrequencyEncoder(nn.Module):
 
 
 class AttentionLayer(nn.Module):
-    def __init__(self, input_feature1, input_feaure2, hiddens, **kwargs):
+    def __init__(self, input_feature1, input_feature2, hiddens, **kwargs):
         super(AttentionLayer, self).__init__(**kwargs)
-        self.V1 = nn.Sequential(
-            nn.Linear(input_feature1, hiddens),
-            nn.LayerNorm(hiddens)
-        )
-        self.K1 = nn.Sequential(
-            nn.Linear(input_feature1, hiddens),
-            nn.LayerNorm(hiddens)
-        )
-        self.V2 = nn.Sequential(
-            nn.Linear(input_feaure2, hiddens),
-            nn.LayerNorm(hiddens)
-        )
-        self.K2 = nn.Sequential(
-            nn.Linear(input_feaure2, hiddens),
-            nn.LayerNorm(hiddens)
-        )
-        self.Q = nn.Sequential(
-            nn.Linear(hiddens, 1),
-            nn.Softplus()
-        )
+        self.input_feature1 = input_feature1
+        self.input_feature2 = input_feature2
+        self.hiddens = hiddens
+        self.V1 = nn.Linear(input_feature1, hiddens)
+        self.K1 = nn.Linear(input_feature1, hiddens)
+        self.alpha1 = hiddens / input_feature1
+        self.V2 = nn.Linear(input_feature2, hiddens)
+        self.K2 = nn.Linear(input_feature2, hiddens)
+        self.alpha2 = hiddens / input_feature2
+        self.Q = nn.Linear(hiddens, 1)
+        self.activate1 = nn.Sigmoid()
+        self.activate2 = nn.Sigmoid()
 
     def forward(self, X1, X2):
         batch_size, seq_length = X1.shape[0], X1.shape[1]
         X1, X2 = X1.view(batch_size * seq_length, -1), X2.view(batch_size * seq_length, -1)
-        v1, k1 = self.V1(X1), self.K1(X1)
-        v2, k2 = self.V2(X2), self.K2(X2)
-        c1, c2 = self.Q(k1), self.Q(k2)
-        c = (c1 + c2).detach()
-        output = (c1 * v1 + c2 * v2) / c
+        v1, k1 = self.V1(X1) * self.alpha1, self.K1(X1) * self.alpha1
+        v2, k2 = self.V2(X2) * self.alpha2, self.K2(X2) * self.alpha2
+        c1, c2 = self.Q(k1) / self.hiddens, self.Q(k2) / self.hiddens
+        c1, c2 = self.activate1(c1), self.activate2(c2)
+        output = c1 * v1 + c2 * v2
         output = output.view(batch_size, seq_length, -1)
         return output
 
