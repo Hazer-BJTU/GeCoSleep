@@ -25,7 +25,7 @@ parser.add_argument('--total_num', nargs='+', default={'ISRUC1': 100, 'SHHS': 20
                     help='number of examples for each task')
 parser.add_argument('--fold_num', type=int, nargs='?', default=10, help='number of a single fold')
 parser.add_argument('--num_epochs', type=int, nargs='?', default=200, help='number of epochs')
-parser.add_argument('--batch_size', type=int, nargs='?', default=256, help='batch size')
+parser.add_argument('--batch_size', type=int, nargs='?', default=64, help='batch size')
 parser.add_argument('--valid_epoch', type=int, nargs='?', default=10, help='validating interval')
 parser.add_argument('--valid_batch', type=int, nargs='?', default=32, help='validating batch size')
 parser.add_argument('--dropout', type=float, nargs='?', default=0.5, help='drop out ratio')
