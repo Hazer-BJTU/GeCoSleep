@@ -18,7 +18,7 @@ class EEGGRnetwork(CLnetwork):
 
     def start_task(self):
         super(EEGGRnetwork, self).start_task()
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, max(self.args.num_epochs_solver // 6, 1), 0.6)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, max(self.num_epochs_solver // 6, 1), 0.6)
         self.optimizerG = torch.optim.Adam(self.generator.parameters(), lr=self.args.lr_generator)
 
     def start_epoch(self):

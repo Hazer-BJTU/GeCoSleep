@@ -32,7 +32,7 @@ parser.add_argument('--dropout', type=float, nargs='?', default=0.5, help='drop 
 parser.add_argument('--weight_decay', type=float, nargs='?', default=1e-5, help='weight decay value')
 parser.add_argument('--lr', type=float, nargs='?', default=1e-3, help='learning rate')
 parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='continual learning strategy')
-parser.add_argument('--num_epochs_generator', type=int, nargs=100, help='number of epochs for generator')
+parser.add_argument('--num_epochs_generator', type=int, nargs='?', default=200, help='number of epochs for generator')
 parser.add_argument('--lr_generator', type=float, nargs='?', default=1e-4, help='learning rate for generator')
 args = parser.parse_args()
 
