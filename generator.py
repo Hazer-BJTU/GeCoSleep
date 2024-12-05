@@ -125,6 +125,7 @@ class DecoderSampler(nn.Module):
         self.dist4 = Distribution(128, 128, 128)
 
     def forward(self, z1):
+        mu1, sigma1 = torch.zeros_like(z1, requires_grad=False), torch.ones_like(z1, requires_grad=False)
         mu2, sigma2 = self.dist2(self.up1(z1))
         eps = torch.randn_like(mu2, requires_grad=False)
         z2 = sigma2 * eps + mu2
@@ -134,7 +135,7 @@ class DecoderSampler(nn.Module):
         mu4, sigma4 = self.dist4(self.up3(z3))
         eps = torch.randn_like(mu4, requires_grad=False)
         z4 = sigma4 * eps + mu4
-        return [z1, z2, z3, z4], [(mu2, sigma2), (mu3, sigma3), (mu4, sigma4)]
+        return [z1, z2, z3, z4], [(mu1, sigma1), (mu2, sigma2), (mu3, sigma3), (mu4, sigma4)]
 
 
 class Encoder(nn.Module):
@@ -177,18 +178,34 @@ class Decoder(nn.Module):
         return X, distributions
 
 
+def kl_gauss_gauss(mu1, sigma1, mu2, sigma2):
+    kl_loss = 2 * torch.log(sigma2) - 2 * torch.log(sigma1) + (sigma1.pow(2) + (mu1 - mu2).pow(2)) / sigma2.pow(2) - 1
+    return torch.mean(0.5 * kl_loss)
+
+
+class EEGVAE(nn.Module):
+    def __init__(self, input_channels, window_size, **kwargs):
+        super(EEGVAE, self).__init__(**kwargs)
+        self.input_channels = input_channels
+        self.windows_size = window_size
+        self.encoder = Encoder(input_channels)
+        self.decoder = Decoder(input_channels, window_size)
+
+    def forward(self, X):
+        batch_size, window_size, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
+        X = X.permute(0, 1, 3, 2).contiguous()
+        X = X.view(batch_size, window_size * series, num_channels)
+        X = X.permute(0, 2, 1).contiguous()
+        zs, enc = self.encoder(X)
+        X, dec = self.decoder(zs[0])
+        kl_loss = 0
+        for distenc, distdec in zip(enc, dec):
+            kl_loss += kl_gauss_gauss(distenc[0], distenc[1], distdec[0], distdec[1])
+        return X, kl_loss
+
+
 if __name__ == '__main__':
-    net1 = Encoder(2)
-    net2 = Decoder(2, 10)
-    X = torch.randn((4, 2, 30000), dtype=torch.float32, requires_grad=False)
-    zs, distributions = net1(X)
-    for z in zs:
-        print(z.shape)
-    for mu, sigma in distributions:
-        print(mu.shape, sigma.shape)
-    X, distributions = net2(zs[0])
-    print(X.shape)
-    for mu, sigma in distributions:
-        print(mu.shape, sigma.shape)
-    torch.save(net1.state_dict(), 'encoder.pth')
-    torch.save(net2.state_dict(), 'decoder.pth')
+    net = EEGVAE(2, 10)
+    X = torch.randn((4, 10, 2, 3000), dtype=torch.float32, requires_grad=False)
+    X_hat, kl_loss = net(X)
+    print(X_hat.shape, kl_loss)
