@@ -87,8 +87,8 @@ class MultiScaleEncoder(nn.Module):
         self.block = nn.Sequential(
             nn.Conv1d(input_channels, 16, kernel_size=kernel_size, stride=stride),
             nn.InstanceNorm1d(16, affine=True), nn.LeakyReLU(0.1),
-            DownSampler(16, 32, 4, 4),
-            DownSampler(32, 128, 4, 4)
+            DownSampler(16, 64, 4, 4),
+            DownSampler(64, 64, 4, 4)
         )
 
     def forward(self, X):
@@ -98,13 +98,13 @@ class MultiScaleEncoder(nn.Module):
 class EncoderSampler(nn.Module):
     def __init__(self, **kwargs):
         super(EncoderSampler, self).__init__(**kwargs)
-        self.dist1 = Distribution(128, 128, 128)
-        self.up1 = UpSampler(128, 128, kernel_size=2, stride=2)
-        self.dist2 = Distribution(256, 128, 128)
-        self.up2 = UpSampler(128, 128, kernel_size=9, stride=2)
-        self.dist3 = Distribution(256, 128, 128)
-        self.up3 = UpSampler(128, 128, kernel_size=4, stride=2)
-        self.dist4 = Distribution(256, 128, 128)
+        self.dist1 = Distribution(64, 64, 64)
+        self.up1 = UpSampler(64, 64, kernel_size=2, stride=2)
+        self.dist2 = Distribution(128, 64, 64)
+        self.up2 = UpSampler(64, 64, kernel_size=9, stride=2)
+        self.dist3 = Distribution(128, 64, 64)
+        self.up3 = UpSampler(64, 64, kernel_size=4, stride=2)
+        self.dist4 = Distribution(128, 64, 64)
 
     def forward(self, X1, X2, X3, X4):
         mu1, sigma1 = self.dist1(X1)
@@ -154,3 +154,4 @@ if __name__ == '__main__':
         print(z.shape)
     for mu, sigma in distributions:
         print(mu.shape, sigma.shape)
+    torch.save(net.state_dict(), 'encoder.pth')
