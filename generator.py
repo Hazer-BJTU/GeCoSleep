@@ -85,8 +85,7 @@ class MultiScaleEncoder(nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.block = nn.Sequential(
-            nn.Conv1d(input_channels, 16, kernel_size=kernel_size, stride=stride),
-            nn.InstanceNorm1d(16, affine=True), nn.LeakyReLU(0.1),
+            DownSampler(input_channels, 16, kernel_size, stride),
             DownSampler(16, 64, 4, 4),
             DownSampler(64, 64, 4, 4)
         )
