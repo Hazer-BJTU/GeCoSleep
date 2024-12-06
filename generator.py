@@ -44,23 +44,6 @@ class Distribution(nn.Module):
         return self.mean(X), self.std(X)
 
 
-class MultiScaleEncoder(nn.Module):
-    def __init__(self, input_channels, kernel_size, stride, **kwargs):
-        super(MultiScaleEncoder, self).__init__(**kwargs)
-        self.input_channels = input_channels
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.block = nn.Sequential(
-            nn.Conv1d(input_channels, 16, kernel_size=kernel_size, stride=stride),
-            nn.InstanceNorm1d(16, affine=True), nn.LeakyReLU(0.1),
-            nn.Conv1d(16, 32, kernel_size=4, stride=4), ResBlock(32),
-            nn.Conv1d(32, 128, kernel_size=4, stride=4), ResBlock(128)
-        )
-
-    def forward(self, X):
-        return self.block(X)
-
-
 class UpSampler(nn.Module):
     def __init__(self, input_channels, output_channels, kernel_size, stride, **kwargs):
         super(UpSampler, self).__init__(**kwargs)
@@ -70,7 +53,42 @@ class UpSampler(nn.Module):
         self.stride = stride
         self.block = nn.Sequential(
             nn.ConvTranspose1d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
+            nn.InstanceNorm1d(output_channels, affine=True), nn.LeakyReLU(0.1),
             ResBlock(output_channels)
+        )
+
+    def forward(self, X):
+        return self.block(X)
+
+
+class DownSampler(nn.Module):
+    def __init__(self, input_channels, output_channels, kernel_size, stride, **kwargs):
+        super(DownSampler, self).__init__(**kwargs)
+        self.input_channels = input_channels
+        self.output_channels = output_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.block = nn.Sequential(
+            nn.Conv1d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
+            nn.InstanceNorm1d(output_channels, affine=True), nn.LeakyReLU(0.1),
+            ResBlock(output_channels)
+        )
+
+    def forward(self, X):
+        return self.block(X)
+
+
+class MultiScaleEncoder(nn.Module):
+    def __init__(self, input_channels, kernel_size, stride, **kwargs):
+        super(MultiScaleEncoder, self).__init__(**kwargs)
+        self.input_channels = input_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.block = nn.Sequential(
+            nn.Conv1d(input_channels, 16, kernel_size=kernel_size, stride=stride),
+            nn.InstanceNorm1d(16, affine=True), nn.LeakyReLU(0.1),
+            DownSampler(16, 32, 4, 4),
+            DownSampler(32, 128, 4, 4)
         )
 
     def forward(self, X):
