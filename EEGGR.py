@@ -9,9 +9,10 @@ class EEGGRnetwork(CLnetwork):
     def __init__(self, args):
         super(EEGGRnetwork, self).__init__(args)
         self.num_epochs_solver = self.args.num_epochs - self.args.num_epochs_generator
-        self.generator = EEGVAE(2, args.window_size)
+        self.generator = EEGVAE(2)
         self.generator.apply(init_weight)
         self.optimizerG = torch.optim.Adam(self.generator.parameters(), lr=args.lr_generator)
+        self.schedulerG = None
         self.rec_loss, self.kl_loss = 0, 0
         self.generator.to(self.device)
         self.mseloss = nn.MSELoss()
@@ -20,6 +21,7 @@ class EEGGRnetwork(CLnetwork):
         super(EEGGRnetwork, self).start_task()
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, max(self.num_epochs_solver // 6, 1), 0.6)
         self.optimizerG = torch.optim.Adam(self.generator.parameters(), lr=self.args.lr_generator)
+        self.schedulerG = torch.optim.lr_scheduler.StepLR(self.optimizerG, max(self.args.num_epochs_generator // 6, 1), 0.6)
 
     def start_epoch(self):
         super(EEGGRnetwork, self).start_epoch()
@@ -34,7 +36,7 @@ class EEGGRnetwork(CLnetwork):
             self.optimizerG.zero_grad()
             X_hat, L_kl = self.generator(X)
             L_rec = self.mseloss(X_hat, X)
-            (L_rec + L_kl).backward()
+            (L_rec + self.args.beta * L_kl).backward()
             self.optimizerG.step()
             self.rec_loss += L_rec.item()
             self.kl_loss += L_kl.item()
@@ -47,6 +49,7 @@ class EEGGRnetwork(CLnetwork):
             print(f'epoch: {self.epoch}, reconstruction loss: {self.rec_loss / self.cnt:.3f}, '
                   f"kl loss {self.kl_loss / self.cnt:.3f}, 1000 lr: {self.optimizerG.state_dict()['param_groups'][0]['lr'] * 1000:.3f}")
             self.epoch += 1
+            self.schedulerG.step()
 
     def end_task(self):
         super(EEGGRnetwork, self).end_task()
