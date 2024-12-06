@@ -140,6 +140,28 @@ class Encoder(nn.Module):
         return zs, distributions
 
 
+class Decoder(nn.Module):
+    def __init__(self, output_channels, **kwargs):
+        super(Decoder, self).__init__(**kwargs)
+        self.dec1 = UpSampler(64, 64, 2, 2)
+        self.dec2 = UpSampler(128, 64, 9, 2)
+        self.dec3 = UpSampler(128, 64, 4, 2)
+        self.dec4 = UpSampler(128, 64, 6, 4)
+        self.dec5 = UpSampler(64, 32, 4, 4)
+        self.dec6 = UpSampler(32, 16, 6, 6)
+        self.dec7 = nn.Conv1d(16, output_channels, kernel_size=1, stride=1)
+
+    def forward(self, zs):
+        X1 = self.dec1(zs[0])
+        X2 = self.dec2(torch.cat((X1, zs[1]), dim=1))
+        X3 = self.dec3(torch.cat((X2, zs[2]), dim=1))
+        X4 = self.dec4(torch.cat((X3, zs[3]), dim=1))
+        X5 = self.dec5(X4)
+        X6 = self.dec6(X5)
+        X7 = self.dec7(X6)
+        return X7
+
+
 def kl_gauss_gauss(mu1, sigma1, mu2, sigma2):
     kl_loss = 2 * torch.log(sigma2) - 2 * torch.log(sigma1) + (sigma1.pow(2) + (mu1 - mu2).pow(2)) / sigma2.pow(2) - 1
     return torch.mean(0.5 * kl_loss)
@@ -147,10 +169,7 @@ def kl_gauss_gauss(mu1, sigma1, mu2, sigma2):
 
 if __name__ == '__main__':
     X = torch.randn((4, 2, 30000), dtype=torch.float32, requires_grad=False)
-    net = Encoder(2)
-    zs, distributions = net(X)
-    for z in zs:
-        print(z.shape)
-    for mu, sigma in distributions:
-        print(mu.shape, sigma.shape)
-    torch.save(net.state_dict(), 'encoder.pth')
+    net1 = Encoder(2)
+    zs, distributions = net1(X)
+    net2 = Decoder(2)
+    print(net2(zs).shape)
