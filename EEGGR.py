@@ -6,14 +6,14 @@ from generator import *
 
 
 class EEGGRnetwork(CLnetwork):
-    def __init__(self, args):
-        super(EEGGRnetwork, self).__init__(args)
+    def __init__(self, args, fold_num):
+        super(EEGGRnetwork, self).__init__(args, fold_num)
         self.num_epochs_solver = self.args.num_epochs - self.args.num_epochs_generator
         self.generator = EEGVAE(2)
         self.generator.apply(init_weight)
         self.optimizerG = torch.optim.Adam(self.generator.parameters(), lr=args.lr_generator)
         self.schedulerG = None
-        self.rec_loss, self.kl_loss = 0, 0
+        self.rec_loss, self.kl_loss, self.feautre_loss = 0, 0, 0
         self.generator.to(self.device)
         self.mseloss = nn.MSELoss()
 
@@ -25,21 +25,30 @@ class EEGGRnetwork(CLnetwork):
 
     def start_epoch(self):
         super(EEGGRnetwork, self).start_epoch()
-        self.rec_loss, self.kl_loss = 0, 0
+        self.rec_loss, self.kl_loss, self.feautre_loss = 0, 0, 0
         self.generator.train()
 
     def observe(self, X, y, first_time=False):
         if self.epoch < self.num_epochs_solver:
             super(EEGGRnetwork, self).observe(X, y, first_time)
         else:
+            if self.epoch == self.num_epochs_solver:
+                print('start training generator...')
+                self.net.load_state_dict(torch.load(self.best_net, map_location=self.device, weights_only=True))
+                print('best solver model loaded...')
             X, y = X.to(self.device), y.to(self.device)
             self.optimizerG.zero_grad()
+            self.optimizer.zero_grad()
             X_hat, L_kl = self.generator(X)
             L_rec = self.mseloss(X_hat, X)
-            (L_rec + self.args.beta * L_kl).backward()
+            F = self.net.feaure_map(X)
+            F_hat = self.net.feaure_map(X_hat)
+            L_feature = self.mseloss(F_hat, F.detach())
+            (L_rec + L_feature + self.args.beta * L_kl).backward()
             self.optimizerG.step()
             self.rec_loss += L_rec.item()
             self.kl_loss += L_kl.item()
+            self.feautre_loss += L_feature.item()
             self.cnt += 1
 
     def end_epoch(self, valid_dataset):
@@ -47,9 +56,13 @@ class EEGGRnetwork(CLnetwork):
             super(EEGGRnetwork, self).end_epoch(valid_dataset)
         else:
             print(f'epoch: {self.epoch}, reconstruction loss: {self.rec_loss / self.cnt:.3f}, '
-                  f"kl loss {self.kl_loss / self.cnt:.3f}, 1000 lr: {self.optimizerG.state_dict()['param_groups'][0]['lr'] * 1000:.3f}")
+                  f'feature loss: {self.feautre_loss / self.cnt:.3f}, kl loss: {self.kl_loss / self.cnt:.3f}, '
+                  f"1000 lr: {self.optimizerG.state_dict()['param_groups'][0]['lr'] * 1000:.3f}")
             self.epoch += 1
             self.schedulerG.step()
+        if self.epoch + 1 == self.args.num_epochs:
+            generator_path = './modelsaved/generator_task' + str(self.task) + '_fold' + str(self.flod_num) + '.pth'
+            torch.save(self.generator.state_dict(), generator_path)
 
     def end_task(self):
         super(EEGGRnetwork, self).end_task()
