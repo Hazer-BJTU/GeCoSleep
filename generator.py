@@ -133,6 +133,13 @@ class Decoder(nn.Module):
         X = X.permute(0, 1, 3, 2).contiguous()
         return X
 
+    def generate(self, batch_size, device):
+        Z = [torch.randn((batch_size, 8, 3750), dtype=torch.float32, requires_grad=False, device=device),
+             torch.randn((batch_size, 16, 937), dtype=torch.float32, requires_grad=False, device=device),
+             torch.randn((batch_size, 32, 234), dtype=torch.float32, requires_grad=False, device=device),
+             torch.randn((batch_size, 128, 58), dtype=torch.float32, requires_grad=False, device=device)]
+        return self.forward(Z)
+
 
 class EEGVAE(nn.Module):
     def __init__(self, input_channels, **kwargs):
@@ -157,4 +164,4 @@ if __name__ == '__main__':
     net = EEGVAE(2)
     X_hat, kl_loss = net(X)
     print(X_hat.shape, kl_loss)
-    torch.save(net.state_dict(), 'EEGVAE.pth')
+    print(net.decoder.generate(8).shape)
