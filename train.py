@@ -6,11 +6,11 @@ from EEGGR import *
 import sys
 
 
-def train_cl(args, trains, valids, tests):
+def train_cl(args, trains, valids, tests, fold_idx):
     test_results = []
     clnetwork = None
     if args.replay_mode == 'none':
-        clnetwork = CLnetwork(args)
+        clnetwork = CLnetwork(args, fold_idx)
     elif args.replay_mode == 'generative':
         clnetwork = EEGGRnetwork(args)
     confusion = ConfusionMatrix(args.task_num)
@@ -72,7 +72,7 @@ def train_k_fold(args):
     for fold_idx in range(len(fold_task_test_idx)):
         trains, valids, tests = create_fold_task_separated(fold_task_train_idx[fold_idx], fold_task_valid_idx[fold_idx], fold_task_test_idx[fold_idx], datas, labels)
         print(f'start fold {fold_idx}:')
-        test_results = train_cl(args, trains, valids, tests)
+        test_results = train_cl(args, trains, valids, tests, fold_idx)
         for i in range(args.task_num + 1):
             for j in range(args.task_num):
                 total_results[i][j][0] += test_results[i][0][j] / len(fold_task_test_idx)
