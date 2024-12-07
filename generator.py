@@ -29,14 +29,14 @@ class Distribution(nn.Module):
         self.hiddens = hiddens
         self.output_channels = output_channels
         self.mean = nn.Sequential(
-            nn.Conv1d(input_channels, hiddens, kernel_size=1, stride=1),
+            nn.Conv1d(input_channels, hiddens, kernel_size=9, stride=1, padding=4),
             nn.InstanceNorm1d(hiddens, affine=True), nn.LeakyReLU(0.1),
-            nn.Conv1d(hiddens, output_channels, kernel_size=1, stride=1)
+            nn.Conv1d(hiddens, output_channels, kernel_size=9, stride=1, padding=4)
         )
         self.std = nn.Sequential(
-            nn.Conv1d(input_channels, hiddens, kernel_size=1, stride=1),
+            nn.Conv1d(input_channels, hiddens, kernel_size=9, stride=1, padding=4),
             nn.InstanceNorm1d(hiddens, affine=True), nn.LeakyReLU(0.1),
-            nn.Conv1d(hiddens, output_channels, kernel_size=1, stride=1),
+            nn.Conv1d(hiddens, output_channels, kernel_size=9, stride=1, padding=4),
             nn.Softplus()
         )
 
