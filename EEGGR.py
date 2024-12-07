@@ -52,13 +52,14 @@ class EEGGRnetwork(CLnetwork):
             L = torch.mean(L_current)
             if self.task > 0:
                 '''perform generative replay'''
-                print(f'start generative replay on {len(self.generators)} tasks:')
+                '''print(f'start generative replay on {len(self.generators)} tasks:')'''
                 self.teacher_model.eval()
                 for decoder in self.generators:
+                    decoder.eval()
                     X_generated = decoder.generate(self.args.batch_size, self.device).detach()
-                    y_generated = self.teacher_model(X_generated).detach() / self.args.tau
-                    y_pred = self.net(X_generated) / self.args.tau
-                    L_replay = torch.mean(self.loss(y_pred, y_generated.softmax(dim=1)))
+                    y_generated = torch.argmax(self.teacher_model(X_generated), dim=1).detach()
+                    y_pred = self.net(X_generated)
+                    L_replay = torch.mean(self.loss(y_pred, y_generated))
                     L = L + L_replay / len(self.generators)
             L.backward()
             nn.utils.clip_grad_norm_(self.net.parameters(), max_norm=20, norm_type=2)
@@ -104,7 +105,7 @@ class EEGGRnetwork(CLnetwork):
 
     def end_task(self):
         super(EEGGRnetwork, self).end_task()
-        generator_path = './modelsaved/generator_task' + str(self.task) + '_fold' + str(self.flod_num) + '.pth'
+        generator_path = './modelsaved/generator_task' + str(self.task - 1) + '_fold' + str(self.flod_num) + '.pth'
         torch.save(self.generator.state_dict(), generator_path)
         self.generators.append(copy.deepcopy(self.generator.decoder))
         
