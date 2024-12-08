@@ -52,13 +52,14 @@ class EEGGRnetwork(CLnetwork):
         if self.task > 0:
             self.teacher_model.load_state_dict(torch.load(self.best_net_memory[-1], map_location=self.device, weights_only=True))
             print(f'teacher model loaded: {self.best_net_memory[-1]}')
-            self.generate_replay_buffer()
 
     def start_epoch(self):
         super(EEGGRnetwork, self).start_epoch()
         '''generator settings'''
         self.rec_loss, self.kl_loss, self.task_loss = 0, 0, 0
         self.generator.train()
+        '''generate replay buffer'''
+        self.generate_replay_buffer()
 
     def observe(self, X, y, first_time=False):
         if self.epoch < self.num_epochs_solver:
@@ -109,9 +110,6 @@ class EEGGRnetwork(CLnetwork):
     def end_epoch(self, valid_dataset):
         if self.epoch < self.num_epochs_solver:
             super(EEGGRnetwork, self).end_epoch(valid_dataset)
-            '''generate replay buffer'''
-            if (self.epoch + 1) % self.args.generate_epoch == 0 and self.task > 0:
-                self.generate_replay_buffer()
         else:
             print(f'epoch: {self.epoch}, reconstruction loss: {self.rec_loss / self.cnt:.3f}, '
                   f'task loss: {self.task_loss / self.cnt:.3f}, kl loss: {self.kl_loss / self.cnt:.3f}, '
