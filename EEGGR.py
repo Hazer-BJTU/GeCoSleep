@@ -95,8 +95,8 @@ class EEGGRnetwork(CLnetwork):
             self.optimizer.zero_grad()
             X_hat, L_kl = self.generator(X)
             L_rec = self.mseloss(X_hat, X)
-            pred_true = self.net(X).detach() / self.args.tau
-            pred_fake = self.net(X_hat) / self.args.tau
+            pred_true = self.net(X).detach()
+            pred_fake = self.net(X_hat)
             L_task = torch.mean(self.loss(pred_fake, pred_true.softmax(dim=1)))
             (L_rec + L_task + self.args.beta * L_kl).backward()
             nn.utils.clip_grad_norm_(self.generator.parameters(), max_norm=20, norm_type=2)
