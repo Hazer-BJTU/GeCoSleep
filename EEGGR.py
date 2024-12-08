@@ -59,7 +59,7 @@ class EEGGRnetwork(CLnetwork):
         self.rec_loss, self.kl_loss, self.task_loss = 0, 0, 0
         self.generator.train()
         '''generate replay buffer'''
-        if self.task > 0:
+        if self.task > 0 and not self.start_training_generator:
             self.generate_replay_buffer()
 
     def observe(self, X, y, first_time=False):
