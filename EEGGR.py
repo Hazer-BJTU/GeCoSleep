@@ -29,11 +29,11 @@ class EEGGRnetwork(CLnetwork):
     def generate_replay_buffer(self):
         self.replay_buffer = None
         self.teacher_model.eval()
-        print('start generating replay samples...')
+        print('start generating replay samples ... ', end='')
         for decoder in self.generators:
             decoder.eval()
             X_generated = decoder.generate(self.args.replay_buffer, self.device).detach()
-            y_generated = torch.argmax(self.teacher_model(X_generated), dim=1).detach()
+            y_generated = self.teacher_model(X_generated).detach()
             if self.replay_buffer is None:
                 self.replay_buffer = [X_generated, y_generated]
             else:
@@ -74,7 +74,7 @@ class EEGGRnetwork(CLnetwork):
                 '''print(f'start generative replay on {len(self.generators)} tasks:')'''
                 X_replay, y_replay = self.replay_buffer[0], self.replay_buffer[1]
                 y_replay_hat = self.net(X_replay)
-                L_replay = torch.mean(self.loss(y_replay_hat, y_replay))
+                L_replay = torch.mean(self.loss(y_replay_hat, y_replay.softmax(dim=1)))
                 L = L + L_replay
             L.backward()
             nn.utils.clip_grad_norm_(self.net.parameters(), max_norm=20, norm_type=2)

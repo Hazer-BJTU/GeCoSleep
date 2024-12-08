@@ -62,9 +62,9 @@ class UpSampler(nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.block = nn.Sequential(
-            ResBlock(input_channels, 'instance'), ResBlock(input_channels, 'instance'),
+            ResBlock(input_channels, 'batch'), ResBlock(input_channels, 'batch'),
             nn.ConvTranspose1d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
-            nn.InstanceNorm1d(output_channels, affine=True), nn.LeakyReLU(0.1),
+            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
         )
 
     def forward(self, X):
@@ -127,7 +127,7 @@ class Decoder(nn.Module):
         self.up4 = UpSampler(16, 16, 8, 8)
         self.last_layer = nn.Sequential(
             nn.Conv1d(16, 16, kernel_size=449, stride=1, padding='same'),
-            nn.InstanceNorm1d(16, affine=True), nn.LeakyReLU(0.1),
+            nn.BatchNorm1d(16), nn.LeakyReLU(0.1),
             nn.Conv1d(16, output_channels, kernel_size=449, stride=1, padding='same')
         )
 
