@@ -126,9 +126,9 @@ class Decoder(nn.Module):
         self.up3 = UpSampler(32, 8, 6, 4)
         self.up4 = UpSampler(16, 16, 8, 8)
         self.last_layer = nn.Sequential(
-            nn.Conv1d(16, 16, kernel_size=449, stride=1, padding='same'),
+            nn.Conv1d(16, 16, kernel_size=9, stride=1, padding='same'),
             nn.InstanceNorm1d(16), nn.LeakyReLU(0.1),
-            nn.Conv1d(16, output_channels, kernel_size=449, stride=1, padding='same')
+            nn.Conv1d(16, output_channels, kernel_size=9, stride=1, padding='same')
         )
 
     def forward(self, Z):
