@@ -34,7 +34,7 @@ parser.add_argument('--lr', type=float, nargs='?', default=1e-3, help='learning 
 parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='continual learning strategy')
 parser.add_argument('--num_epochs_generator', type=int, nargs='?', default=100, help='number of epochs for generator')
 parser.add_argument('--lr_generator', type=float, nargs='?', default=1e-3, help='learning rate for generator')
-parser.add_argument('--beta', type=float, nargs='?', default=5e-1, help='coefficient of kl loss')
+parser.add_argument('--beta', type=float, nargs='?', default=1, help='coefficient of kl loss')
 parser.add_argument('--replay_buffer', type=int, nargs='?', default=32, help='size of replay buffer')
 args = parser.parse_args()
 

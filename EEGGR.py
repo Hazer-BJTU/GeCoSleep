@@ -37,8 +37,8 @@ class EEGGRnetwork(CLnetwork):
             if self.replay_buffer is None:
                 self.replay_buffer = [X_generated, y_generated]
             else:
-                self.replay_buffer[0] = torch.cat((self.replay_buffer[0], X_generated), dim=1)
-                self.replay_buffer[1] = torch.cat((self.replay_buffer[1], y_generated), dim=1)
+                self.replay_buffer[0] = torch.cat((self.replay_buffer[0], X_generated), dim=0)
+                self.replay_buffer[1] = torch.cat((self.replay_buffer[1], y_generated), dim=0)
         print(f'{self.replay_buffer[0].shape[0]} samples generated')
 
     def start_task(self):
