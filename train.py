@@ -73,6 +73,11 @@ def train_k_fold(args):
         trains, valids, tests = create_fold_task_separated(fold_task_train_idx[fold_idx], fold_task_valid_idx[fold_idx], fold_task_test_idx[fold_idx], datas, labels)
         print(f'start fold {fold_idx}:')
         test_results = train_cl(args, trains, valids, tests, fold_idx)
+        saved_stdout = sys.stdout
+        with open('temp_output.txt', 'a+') as file:
+            sys.stdout = file
+            print(test_results)
+        sys.stdout = saved_stdout
         for i in range(args.task_num + 1):
             for j in range(args.task_num):
                 total_results[i][j][0] += test_results[i][0][j] / len(fold_task_test_idx)
