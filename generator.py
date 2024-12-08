@@ -7,19 +7,29 @@ from data_preprocessing import *
 
 
 class ResBlock(nn.Module):
-    def __init__(self, channels, **kwargs):
+    def __init__(self, channels, norm_type, **kwargs):
         super(ResBlock, self).__init__(**kwargs)
         self.channels = channels
-        self.block1 = nn.Sequential(
-            nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding=4),
-            nn.InstanceNorm1d(channels, affine=True), nn.LeakyReLU(0.1),
-            nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding=4),
-            nn.InstanceNorm1d(channels, affine=True)
-        )
+        self.norm_type = norm_type
+        self.block = None
+        if norm_type == 'instance':
+            self.block = nn.Sequential(
+                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding=4),
+                nn.InstanceNorm1d(channels, affine=True), nn.LeakyReLU(0.1),
+                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding=4),
+                nn.InstanceNorm1d(channels, affine=True)
+            )
+        elif norm_type == 'batch':
+            self.block = nn.Sequential(
+                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding=4),
+                nn.BatchNorm1d(channels), nn.LeakyReLU(0.1),
+                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding=4),
+                nn.BatchNorm1d(channels)
+            )
         self.activate = nn.LeakyReLU(0.1)
 
     def forward(self, X):
-        return self.activate(self.block1(X) + X)
+        return self.activate(self.block(X) + X)
 
 
 class Distribution(nn.Module):
@@ -30,12 +40,12 @@ class Distribution(nn.Module):
         self.output_channels = output_channels
         self.mean = nn.Sequential(
             nn.Conv1d(input_channels, hiddens, kernel_size=9, stride=1, padding=4),
-            nn.InstanceNorm1d(hiddens, affine=True), nn.LeakyReLU(0.1),
+            nn.BatchNorm1d(hiddens), nn.LeakyReLU(0.1),
             nn.Conv1d(hiddens, output_channels, kernel_size=9, stride=1, padding=4)
         )
         self.std = nn.Sequential(
             nn.Conv1d(input_channels, hiddens, kernel_size=9, stride=1, padding=4),
-            nn.InstanceNorm1d(hiddens, affine=True), nn.LeakyReLU(0.1),
+            nn.BatchNorm1d(hiddens), nn.LeakyReLU(0.1),
             nn.Conv1d(hiddens, output_channels, kernel_size=9, stride=1, padding=4),
             nn.Softplus()
         )
@@ -52,7 +62,7 @@ class UpSampler(nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.block = nn.Sequential(
-            ResBlock(input_channels), ResBlock(input_channels),
+            ResBlock(input_channels, 'instance'), ResBlock(input_channels, 'instance'),
             nn.ConvTranspose1d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
             nn.InstanceNorm1d(output_channels, affine=True), nn.LeakyReLU(0.1),
         )
@@ -70,8 +80,8 @@ class DownSampler(nn.Module):
         self.stride = stride
         self.block = nn.Sequential(
             nn.Conv1d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
-            nn.InstanceNorm1d(output_channels, affine=True), nn.LeakyReLU(0.1),
-            ResBlock(output_channels), ResBlock(output_channels)
+            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
+            ResBlock(output_channels, 'batch'), ResBlock(output_channels, 'batch')
         )
 
     def forward(self, X):
