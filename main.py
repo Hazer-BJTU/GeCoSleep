@@ -36,6 +36,7 @@ parser.add_argument('--num_epochs_generator', type=int, nargs='?', default=100, 
 parser.add_argument('--lr_generator', type=float, nargs='?', default=1e-3, help='learning rate for generator')
 parser.add_argument('--beta', type=float, nargs='?', default=1, help='coefficient of kl loss')
 parser.add_argument('--replay_buffer', type=int, nargs='?', default=32, help='size of replay buffer')
+parser.add_argument('--generate_epoch', type=int, nargs='?', default=5, help='interval of generating samples')
 args = parser.parse_args()
 
 if __name__ == '__main__':
