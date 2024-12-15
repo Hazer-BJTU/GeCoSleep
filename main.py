@@ -17,7 +17,7 @@ parser.add_argument('--sleep_edf_path', type=str, nargs='?',
                     default='/home/ShareData/sleep-edf-153-3chs', help='file path of sleepedf dataset')
 parser.add_argument('--sleep_edf', nargs='+', default=['Fpz-Cz', 'EOG'], help='channels of sleepedf')
 parser.add_argument('--task_num', type=int, nargs='?', default=4, help='number of tasks')
-parser.add_argument('--task_names', nargs='+', default=['ISRUC1', 'SHHS', 'MASS', 'Sleep-EDF'],
+parser.add_argument('--task_names', nargs='+', default=['ISRUC1', 'Sleep-EDF', 'SHHS', 'MASS'],
                     help='the list of task names')
 parser.add_argument('--cuda_idx', type=int, nargs='?', default=0, help='device index')
 parser.add_argument('--window_size', type=int, nargs='?', default=10, help='length of sequence')

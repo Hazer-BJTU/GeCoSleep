@@ -150,12 +150,10 @@ class SleepNet(nn.Module):
         output = self.classifier(f)
         return output
 
-    def feaure_map(self, X):
-        batch_size, seq_length, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
-        f1 = self.encoder1(X)
-        f2 = self.encoder2(X)
-        f = self.attention(f1, f2)
-        return f
+    def freeze_parameters(self):
+        self.encoder1.eval()
+        self.encoder2.eval()
+        self.attention.eval()
 
 
 def init_weight(module):
