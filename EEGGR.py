@@ -24,9 +24,10 @@ class EEGGRnetwork(CLnetwork):
         self.teacher_model.to(self.device)
         self.generators = []
         self.replay_buffer = None
+        self.replay_coef = None
 
     def generate_replay_buffer(self):
-        self.replay_buffer = None
+        self.replay_buffer, self.replay_coef = None, None
         self.teacher_model.eval()
         print('start generating replay samples, teachers loading: ')
         for teacher, decoder in zip(self.best_net_memory, self.generators):
@@ -36,11 +37,14 @@ class EEGGRnetwork(CLnetwork):
             self.teacher_model.eval()
             X_generated = decoder.generate(self.args.replay_buffer, self.device).detach()
             y_generated = self.teacher_model(X_generated).detach()
+            temp = torch.ones(self.args.replay_buffer * self.args.window_size, dtype=torch.float32, device=self.device, requires_grad=False)
             if self.replay_buffer is None:
                 self.replay_buffer = [X_generated, y_generated]
+                self.replay_coef = temp
             else:
                 self.replay_buffer[0] = torch.cat((self.replay_buffer[0], X_generated), dim=0)
                 self.replay_buffer[1] = torch.cat((self.replay_buffer[1], y_generated), dim=0)
+                self.replay_coef = torch.cat((2 * self.replay_coef, temp), dim=0)
         print(f'replay buffer {self.replay_buffer[0].shape[0]} samples generated')
 
     def start_task(self):
@@ -78,7 +82,7 @@ class EEGGRnetwork(CLnetwork):
                 '''print(f'start generative replay on {len(self.generators)} tasks:')'''
                 X_replay, y_replay = self.replay_buffer[0], self.replay_buffer[1]
                 y_replay_hat = self.net(X_replay)
-                L_replay = torch.mean(self.loss(y_replay_hat, y_replay.softmax(dim=1)))
+                L_replay = torch.mean(self.loss(y_replay_hat, y_replay.softmax(dim=1)) * self.replay_coef)
                 L = L + L_replay
             L.backward()
             nn.utils.clip_grad_norm_(self.net.parameters(), max_norm=20, norm_type=2)
