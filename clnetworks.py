@@ -63,11 +63,12 @@ class CLnetwork:
                                              self.device, self.args.valid_batch)
             valid_acc, valid_mf1 = valid_confusion.accuracy(), valid_confusion.macro_f1()
             print(f'valid accuracy: {valid_acc:.3f}, valid macro F1: {valid_mf1:.3f}')
-            if valid_acc + valid_mf1 > self.best_valid_acc:
-                self.best_train_loss = self.train_loss
+            if valid_acc + valid_mf1 > self.best_valid_acc and self.epoch + 1 >= self.args.min_epoch:
+                self.best_train_loss = self.train_loss / self.cnt
                 self.best_train_acc = train_acc
                 self.best_valid_acc = valid_acc + valid_mf1
                 self.best_net = './modelsaved/' + str(self.args.replay_mode) + '_task' + str(self.task) + '_fold' + str(self.flod_num) + '.pth'
+                print(f'model saved: {self.best_net}')
                 torch.save(self.net.state_dict(), self.best_net)
         self.epoch += 1
         self.scheduler.step()

@@ -1,6 +1,5 @@
 import copy
-
-import torch
+import random
 import torch.nn
 from clnetworks import CLnetwork
 from models import *
@@ -24,6 +23,7 @@ class EEGGRnetwork(CLnetwork):
         self.teacher_model.to(self.device)
         self.generators = []
         self.replay_buffer = None
+        self.labels = None
         self.replay_coef = None
 
     def generate_replay_buffer(self):
@@ -35,16 +35,16 @@ class EEGGRnetwork(CLnetwork):
             self.teacher_model.load_state_dict(torch.load(teacher, map_location=self.device, weights_only=True))
             print(f'teacher model: {teacher}')
             self.teacher_model.eval()
-            X_generated = decoder.generate(self.args.replay_buffer, self.device).detach()
+            X_generated = decoder.generate(self.labels.to(self.device)).detach()
             y_generated = self.teacher_model(X_generated).detach()
-            temp = torch.ones(self.args.replay_buffer * self.args.window_size, dtype=torch.float32, device=self.device, requires_grad=False)
+            temp = torch.ones(y_generated.shape[0], dtype=torch.float32, device=self.device, requires_grad=False)
             if self.replay_buffer is None:
                 self.replay_buffer = [X_generated, y_generated]
                 self.replay_coef = temp
             else:
                 self.replay_buffer[0] = torch.cat((self.replay_buffer[0], X_generated), dim=0)
                 self.replay_buffer[1] = torch.cat((self.replay_buffer[1], y_generated), dim=0)
-                self.replay_coef = torch.cat((2 * self.replay_coef, temp), dim=0)
+                self.replay_coef = torch.cat((self.replay_coef * self.args.gamma, temp), dim=0)
         print(f'replay buffer {self.replay_buffer[0].shape[0]} samples generated')
 
     def start_task(self):
@@ -69,11 +69,11 @@ class EEGGRnetwork(CLnetwork):
             self.generate_replay_buffer()
 
     def observe(self, X, y, first_time=False):
+        if random.random() < 0.1 or self.labels is None:
+            self.labels = y[:self.args.replay_buffer, :]
         if self.epoch < self.num_epochs_solver:
             X, y = X.to(self.device), y.to(self.device)
             self.optimizer.zero_grad()
-            if self.task > 0:
-                self.net.freeze_parameters()
             y_hat = self.net(X)
             L_current = self.loss(y_hat, y.view(-1))
             L = torch.mean(L_current)
@@ -103,7 +103,7 @@ class EEGGRnetwork(CLnetwork):
             X, y = X.to(self.device), y.to(self.device)
             self.optimizerG.zero_grad()
             self.optimizer.zero_grad()
-            X_hat, L_kl = self.generator(X)
+            X_hat, L_kl = self.generator(X, y)
             L_rec = self.mseloss(X_hat, X)
             pred_true = self.net(X).detach()
             pred_fake = self.net(X_hat)
