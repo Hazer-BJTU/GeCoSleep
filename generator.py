@@ -99,10 +99,9 @@ class Encoder(nn.Module):
         self.down3 = DownSampler(32, 64, kernel_size=4, stride=4)
         self.dist3 = Distribution(64, 64, 32)
         self.down4 = DownSampler(64, 128, kernel_size=4, stride=4)
-        self.dist4 = Distribution(228, 128, 128)
-        self.embedding = nn.Embedding(5, 580)
+        self.dist4 = Distribution(128, 128, 128)
 
-    def forward(self, X, y):
+    def forward(self, X):
         batch_size, window_size, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
         X = X.permute(0, 1, 3, 2).contiguous()
         X = X.view(batch_size, window_size * series, num_channels)
@@ -114,11 +113,7 @@ class Encoder(nn.Module):
         X3 = self.down3(X2)
         mu3, sigma3 = self.dist3(X3)
         X4 = self.down4(X3)
-        y = y.view(-1)
-        y = self.embedding(y)
-        y = y.view(batch_size, X4.shape[2], -1)
-        y = y.permute(0, 2, 1).contiguous()
-        mu4, sigma4 = self.dist4(torch.cat((X4, y), dim=1))
+        mu4, sigma4 = self.dist4(X4)
         return [(mu1, sigma1), (mu2, sigma2), (mu3, sigma3), (mu4, sigma4)]
 
 
@@ -126,8 +121,7 @@ class Decoder(nn.Module):
     def __init__(self, output_channels, **kwargs):
         super(Decoder, self).__init__(**kwargs)
         self.output_channels = output_channels
-        self.embedding = nn.Embedding(5, 580)
-        self.up1 = UpSampler(228, 32, 6, 4)
+        self.up1 = UpSampler(128, 32, 6, 4)
         self.up2 = UpSampler(64, 16, 5, 4)
         self.up3 = UpSampler(32, 8, 6, 4)
         self.up4 = UpSampler(16, 16, 8, 8)
@@ -137,13 +131,8 @@ class Decoder(nn.Module):
             nn.Conv1d(16, output_channels, kernel_size=9, stride=1, padding='same')
         )
 
-    def forward(self, Z, y):
-        batch_size = Z[3].shape[0]
-        y = y.view(-1)
-        y = self.embedding(y)
-        y = y.view(batch_size, Z[3].shape[2], -1)
-        y = y.permute(0, 2, 1).contiguous()
-        Z1 = self.up1(torch.cat((Z[3], y), dim=1))
+    def forward(self, Z):
+        Z1 = self.up1(Z[3])
         Z2 = self.up2(torch.cat((Z[2], Z1), dim=1))
         Z3 = self.up3(torch.cat((Z[1], Z2), dim=1))
         Z4 = self.up4(torch.cat((Z[0], Z3), dim=1))
@@ -154,13 +143,12 @@ class Decoder(nn.Module):
         X = X.permute(0, 1, 3, 2).contiguous()
         return X
 
-    def generate(self, y):
-        batch_size, device = y.shape[0], y.device
+    def generate(self, batch_size, device):
         Z = [torch.randn((batch_size, 8, 3750), dtype=torch.float32, requires_grad=False, device=device),
              torch.randn((batch_size, 16, 937), dtype=torch.float32, requires_grad=False, device=device),
              torch.randn((batch_size, 32, 234), dtype=torch.float32, requires_grad=False, device=device),
              torch.randn((batch_size, 128, 58), dtype=torch.float32, requires_grad=False, device=device)]
-        return self.forward(Z, y)
+        return self.forward(Z)
 
 
 class EEGVAE(nn.Module):
@@ -169,21 +157,21 @@ class EEGVAE(nn.Module):
         self.encoder = Encoder(input_channels)
         self.decoder = Decoder(input_channels)
 
-    def forward(self, X, y):
-        distributions = self.encoder(X, y)
+    def forward(self, X):
+        distributions = self.encoder(X)
         kl_loss, Z = 0, []
         for mu, sigma in distributions:
             eps = torch.randn_like(mu, requires_grad=False)
             z = sigma * eps + mu
             Z.append(z)
             kl_loss += torch.mean(-2 * torch.log(sigma) + sigma.pow(2) + mu.pow(2) - 1) * 0.5
-        X_hat = self.decoder(Z, y)
+        X_hat = self.decoder(Z)
         return X_hat, kl_loss
 
 
 if __name__ == '__main__':
     X = torch.randn((4, 10, 2, 3000), dtype=torch.float32, requires_grad=False)
-    y = torch.randint(0, 5, (4, 10), dtype=torch.int64, requires_grad=False)
     net = EEGVAE(2)
-    X_hat, kl_loss = net(X, y)
+    X_hat, kl_loss = net(X)
     print(X_hat.shape, kl_loss)
+    print(net.decoder.generate(8, 'cpu').shape)
