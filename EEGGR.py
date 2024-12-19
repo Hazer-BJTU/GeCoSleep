@@ -81,7 +81,7 @@ class EEGGRnetwork(CLnetwork):
                 '''print(f'start generative replay on {len(self.generators)} tasks:')'''
                 X_replay, y_replay = self.replay_buffer[0], self.replay_buffer[1]
                 y_replay_hat = self.net(X_replay)
-                L_replay = torch.mean(self.loss(y_replay_hat, y_replay.softmax(dim=1)) * self.replay_coef) * self.task
+                L_replay = self.mseloss(y_replay_hat, y_replay) * self.task
                 L = L + L_replay
             L.backward()
             nn.utils.clip_grad_norm_(self.net.parameters(), max_norm=20, norm_type=2)
@@ -106,8 +106,8 @@ class EEGGRnetwork(CLnetwork):
             L_rec = self.mseloss(X_hat, X)
             pred_true = self.net(X).detach()
             pred_fake = self.net(X_hat)
-            L_task = torch.mean(self.loss(pred_fake, pred_true.softmax(dim=1)))
-            (L_rec + L_task + self.args.beta * L_kl).backward()
+            L_task = self.mseloss(pred_fake, pred_true)
+            (L_rec + self.args.alpha * L_task + self.args.beta * L_kl).backward()
             nn.utils.clip_grad_norm_(self.generator.parameters(), max_norm=20, norm_type=2)
             self.optimizerG.step()
             self.rec_loss += L_rec.item()
