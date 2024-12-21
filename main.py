@@ -39,8 +39,8 @@ parser.add_argument('--lr_generator', type=float, nargs='?', default=1e-3, help=
 parser.add_argument('--alpha', type=float, nargs='?', default=1, help='coefficient of task loss')
 parser.add_argument('--beta', type=float, nargs='?', default=1, help='coefficient of kl loss')
 parser.add_argument('--replay_buffer', type=int, nargs='?', default=32, help='size of replay buffer')
-parser.add_argument('--generate_epoch', type=int, nargs='?', default=5, help='interval of generating samples')
-parser.add_argument('--gamma', type=float, nargs='?', default=1.4, help='replay coefficient')
+parser.add_argument('--generate_epoch', type=int, nargs='?', default=1, help='interval of generating samples')
+parser.add_argument('--gamma', type=float, nargs='?', default=2, help='replay coefficient')
 args = parser.parse_args()
 
 if __name__ == '__main__':

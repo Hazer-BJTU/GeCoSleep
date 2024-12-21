@@ -18,6 +18,7 @@ class EEGGRnetwork(CLnetwork):
         self.rec_loss, self.kl_loss, self.task_loss = 0, 0, 0
         self.generator.to(self.device)
         self.mseloss = nn.MSELoss()
+        self.mseloss_noreduction = nn.MSELoss(reduction='none')
         '''replay settings'''
         self.teacher_model = SleepNet(2, args.dropout)
         self.teacher_model.to(self.device)
@@ -79,7 +80,9 @@ class EEGGRnetwork(CLnetwork):
                 '''print(f'start generative replay on {len(self.generators)} tasks:')'''
                 X_replay, y_replay = self.replay_buffer[0], self.replay_buffer[1]
                 y_replay_hat = self.net(X_replay)
-                L_replay = self.mseloss(y_replay_hat, y_replay) * self.task
+                loss_weights = self.replay_coef / torch.sum(self.replay_coef)
+                L_replay = torch.mean(self.mseloss_noreduction(y_replay_hat, y_replay), dim=1)
+                L_replay = torch.sum(L_replay * loss_weights) * self.task
                 L = L + L_replay
             L.backward()
             nn.utils.clip_grad_norm_(self.net.parameters(), max_norm=20, norm_type=2)
@@ -104,7 +107,7 @@ class EEGGRnetwork(CLnetwork):
             L_rec = self.mseloss(X_hat, X)
             pred_true = self.net(X).detach()
             pred_fake = self.net(X_hat)
-            L_task = self.mseloss(pred_fake, pred_true)
+            L_task = torch.mean(self.loss(pred_fake, pred_true.softmax(dim=1)))
             (L_rec + self.args.alpha * L_task + self.args.beta * L_kl).backward()
             nn.utils.clip_grad_norm_(self.generator.parameters(), max_norm=20, norm_type=2)
             self.optimizerG.step()
