@@ -82,7 +82,7 @@ class EEGGRnetwork(CLnetwork):
                 y_replay_hat = self.net(X_replay)
                 loss_weights = self.replay_coef / torch.sum(self.replay_coef)
                 L_replay = torch.mean(self.mseloss_noreduction(y_replay_hat, y_replay), dim=1)
-                L_replay = torch.sum(L_replay * loss_weights) * self.task
+                L_replay = torch.sum(L_replay * loss_weights) * self.args.theta
                 L = L + L_replay
             L.backward()
             nn.utils.clip_grad_norm_(self.net.parameters(), max_norm=20, norm_type=2)
