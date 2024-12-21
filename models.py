@@ -9,26 +9,26 @@ class RawDataEncoder(nn.Module):
         self.dropout = dropout
         self.block1 = nn.Sequential(
             nn.Conv1d(input_channels, 64, kernel_size=50, stride=6),
-            nn.BatchNorm1d(64), nn.ReLU(),
+            nn.BatchNorm1d(64), nn.LeakyReLU(0.1),
             nn.MaxPool1d(kernel_size=8, stride=8), nn.Dropout(dropout),
             nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
             nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
             nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
             nn.AvgPool1d(kernel_size=4, stride=4)
         )
         self.block2 = nn.Sequential(
             nn.Conv1d(input_channels, 64, kernel_size=400, stride=50),
-            nn.BatchNorm1d(64), nn.ReLU(),
+            nn.BatchNorm1d(64), nn.LeakyReLU(0.1),
             nn.MaxPool1d(kernel_size=4, stride=4), nn.Dropout(dropout),
             nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
             nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
             nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
             nn.AvgPool1d(kernel_size=2, stride=2)
         )
         self.block3 = nn.Dropout(dropout)
@@ -52,15 +52,15 @@ class FrequencyEncoder(nn.Module):
         self.sample_rate = sample_rate
         self.block = nn.Sequential(
             nn.Conv1d(input_channels + 1, 64, kernel_size=5, stride=5),
-            nn.BatchNorm1d(64), nn.ReLU(),
+            nn.BatchNorm1d(64), nn.LeakyReLU(0.1),
             nn.MaxPool1d(kernel_size=8, stride=8), nn.Dropout(dropout),
             nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
             nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
             nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.ReLU(),
-            nn.AvgPool1d(kernel_size=4, stride=4), nn.Dropout(dropout)
+            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
+            nn.AvgPool1d(kernel_size=4, stride=4)
         )
 
     def forward(self, X):
@@ -128,14 +128,12 @@ class SleepNet(nn.Module):
         self.encoder1 = RawDataEncoder(input_channels, dropout)
         self.encoder2 = FrequencyEncoder(input_channels, dropout)
         self.attention = AttentionLayer(2688, 1152, 512)
-        self.resblock = nn.Sequential(
-            nn.Linear(512, 512),
-            nn.ReLU()
-        )
+        self.resblock = nn.Linear(512, 512)
         self.gru = GRULayer(512, 256)
         self.classifier = nn.Sequential(
+            nn.LeakyReLU(0.1), nn.Dropout(dropout),
             nn.Linear(1024, 512),
-            nn.ReLU(), nn.Dropout(dropout),
+            nn.LeakyReLU(0.1), nn.Dropout(dropout),
             nn.Linear(512, 5)
         )
 

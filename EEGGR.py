@@ -70,8 +70,6 @@ class EEGGRnetwork(CLnetwork):
     def observe(self, X, y, first_time=False):
         if self.epoch < self.num_epochs_solver:
             X, y = X.to(self.device), y.to(self.device)
-            if self.task > 0:
-                self.net.freeze_parameters()
             self.optimizer.zero_grad()
             y_hat = self.net(X)
             L_current = self.loss(y_hat, y.view(-1))
@@ -104,9 +102,9 @@ class EEGGRnetwork(CLnetwork):
             self.optimizer.zero_grad()
             X_hat, L_kl = self.generator(X)
             L_rec = self.mseloss(X_hat, X)
-            '''pred_true = self.net(X).detach()'''
+            pred_true = self.net(X).detach()
             pred_fake = self.net(X_hat)
-            L_task = torch.mean(self.loss(pred_fake, y.view(-1)))
+            L_task = self.mseloss(pred_fake, pred_true)
             (L_rec + self.args.alpha * L_task + self.args.beta * L_kl).backward()
             nn.utils.clip_grad_norm_(self.generator.parameters(), max_norm=20, norm_type=2)
             self.optimizerG.step()

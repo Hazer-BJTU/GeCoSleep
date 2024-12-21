@@ -93,13 +93,13 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__(**kwargs)
         self.input_channels = input_channels
         self.down1 = DownSampler(input_channels, 16, kernel_size=8, stride=8)
-        self.dist1 = Distribution(16, 16, 8)
+        self.dist1 = Distribution(16, 32, 16)
         self.down2 = DownSampler(16, 32, kernel_size=4, stride=4)
-        self.dist2 = Distribution(32, 32, 16)
+        self.dist2 = Distribution(32, 64, 32)
         self.down3 = DownSampler(32, 64, kernel_size=4, stride=4)
-        self.dist3 = Distribution(64, 64, 32)
+        self.dist3 = Distribution(64, 128, 64)
         self.down4 = DownSampler(64, 128, kernel_size=4, stride=4)
-        self.dist4 = Distribution(128, 128, 128)
+        self.dist4 = Distribution(128, 256, 256)
 
     def forward(self, X):
         batch_size, window_size, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
@@ -121,14 +121,14 @@ class Decoder(nn.Module):
     def __init__(self, output_channels, **kwargs):
         super(Decoder, self).__init__(**kwargs)
         self.output_channels = output_channels
-        self.up1 = UpSampler(128, 32, 6, 4)
-        self.up2 = UpSampler(64, 16, 5, 4)
-        self.up3 = UpSampler(32, 8, 6, 4)
-        self.up4 = UpSampler(16, 16, 8, 8)
+        self.up1 = UpSampler(256, 64, 6, 4)
+        self.up2 = UpSampler(128, 32, 5, 4)
+        self.up3 = UpSampler(64, 16, 6, 4)
+        self.up4 = UpSampler(32, 32, 8, 8)
         self.last_layer = nn.Sequential(
-            nn.Conv1d(16, 16, kernel_size=9, stride=1, padding='same'),
-            nn.InstanceNorm1d(16, affine=True), nn.LeakyReLU(0.1),
-            nn.Conv1d(16, output_channels, kernel_size=9, stride=1, padding='same')
+            nn.Conv1d(32, 32, kernel_size=9, stride=1, padding='same'),
+            nn.InstanceNorm1d(32, affine=True), nn.LeakyReLU(0.1),
+            nn.Conv1d(32, output_channels, kernel_size=9, stride=1, padding='same')
         )
 
     def forward(self, Z):
@@ -144,10 +144,10 @@ class Decoder(nn.Module):
         return X
 
     def generate(self, batch_size, device):
-        Z = [torch.randn((batch_size, 8, 3750), dtype=torch.float32, requires_grad=False, device=device),
-             torch.randn((batch_size, 16, 937), dtype=torch.float32, requires_grad=False, device=device),
-             torch.randn((batch_size, 32, 234), dtype=torch.float32, requires_grad=False, device=device),
-             torch.randn((batch_size, 128, 58), dtype=torch.float32, requires_grad=False, device=device)]
+        Z = [torch.randn((batch_size, 16, 3750), dtype=torch.float32, requires_grad=False, device=device),
+             torch.randn((batch_size, 32, 937), dtype=torch.float32, requires_grad=False, device=device),
+             torch.randn((batch_size, 64, 234), dtype=torch.float32, requires_grad=False, device=device),
+             torch.randn((batch_size, 256, 58), dtype=torch.float32, requires_grad=False, device=device)]
         return self.forward(Z)
 
 
@@ -175,3 +175,4 @@ if __name__ == '__main__':
     X_hat, kl_loss = net(X)
     print(X_hat.shape, kl_loss)
     print(net.decoder.generate(8, 'cpu').shape)
+    torch.save(net.state_dict(), 'EEGVAE.pth')
