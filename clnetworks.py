@@ -12,7 +12,7 @@ class CLnetwork:
         self.net = SleepNet(2, args.dropout)
         self.net.apply(init_weight)
         self.scheduler = None
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         self.loss = nn.CrossEntropyLoss(reduction='none')
         self.best_train_loss, self.best_train_acc, self.best_valid_acc = 0.0, 0.0, 0.0
         self.train_loss, self.confusion_matrix, self.cnt = 0.0, ConfusionMatrix(1), 0
@@ -31,7 +31,7 @@ class CLnetwork:
         self.best_net = None
         self.label_cnt = torch.zeros(5, dtype=torch.float32, device=self.device, requires_grad=False)
         self.best_train_loss, self.best_train_acc, self.best_valid_acc = 0.0, 0.0, 0.0
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
+        self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, max(self.args.num_epochs // 6, 1), 0.6)
 
     def start_epoch(self):
@@ -46,7 +46,6 @@ class CLnetwork:
         L_current = self.loss(y_hat, y.view(-1))
         L = torch.mean(L_current)
         L.backward()
-        nn.utils.clip_grad_norm_(self.net.parameters(), max_norm=20, norm_type=2)
         self.optimizer.step()
         self.train_loss += L.item()
         self.cnt += 1

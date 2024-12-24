@@ -1,123 +1,116 @@
 import torch
+import math
 import torch.nn as nn
 
 
-class RawDataEncoder(nn.Module):
-    def __init__(self, input_channels, dropout, **kwargs):
-        super(RawDataEncoder, self).__init__(**kwargs)
+class MultiScaleCNN(nn.Module):
+    def __init__(self, input_channels, hiddens, output_channels, kernel_size, stride, pooling, dropout, **kwargs):
+        super(MultiScaleCNN, self).__init__(**kwargs)
         self.input_channels = input_channels
+        self.hiddens = hiddens
+        self.output_channels = output_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.pooling = pooling
         self.dropout = dropout
-        self.block1 = nn.Sequential(
-            nn.Conv1d(input_channels, 64, kernel_size=50, stride=6),
-            nn.BatchNorm1d(64), nn.LeakyReLU(0.1),
-            nn.MaxPool1d(kernel_size=8, stride=8), nn.Dropout(dropout),
-            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
-            nn.AvgPool1d(kernel_size=4, stride=4)
-        )
-        self.block2 = nn.Sequential(
-            nn.Conv1d(input_channels, 64, kernel_size=400, stride=50),
-            nn.BatchNorm1d(64), nn.LeakyReLU(0.1),
-            nn.MaxPool1d(kernel_size=4, stride=4), nn.Dropout(dropout),
-            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
-            nn.AvgPool1d(kernel_size=2, stride=2)
-        )
-        self.block3 = nn.Dropout(dropout)
-
-    def forward(self, X):
-        batch_size, seq_length, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
-        X = X.view(batch_size * seq_length, num_channels, series)
-        y1 = self.block1(X)
-        y2 = self.block2(X)
-        y = torch.cat((y1, y2), dim=2)
-        y = self.block3(y)
-        y = y.view(batch_size, seq_length, -1)
-        return y
-
-
-class FrequencyEncoder(nn.Module):
-    def __init__(self, input_channels, dropout, sample_rate=100, **kwargs):
-        super(FrequencyEncoder, self).__init__(**kwargs)
-        self.input_channels = input_channels
-        self.dropout = dropout
-        self.sample_rate = sample_rate
         self.block = nn.Sequential(
-            nn.Conv1d(input_channels + 1, 64, kernel_size=5, stride=5),
-            nn.BatchNorm1d(64), nn.LeakyReLU(0.1),
-            nn.MaxPool1d(kernel_size=8, stride=8), nn.Dropout(dropout),
-            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
-            nn.Conv1d(128, 128, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(128), nn.LeakyReLU(0.1),
-            nn.AvgPool1d(kernel_size=4, stride=4)
+            nn.Conv1d(input_channels, hiddens, kernel_size=kernel_size, stride=stride),
+            nn.BatchNorm1d(hiddens), nn.LeakyReLU(0.1),
+            nn.MaxPool1d(kernel_size=pooling, stride=pooling), nn.Dropout(dropout),
+            nn.Conv1d(hiddens, output_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
+            nn.Conv1d(output_channels, output_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
+            nn.Conv1d(output_channels, output_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
+            nn.AvgPool1d(kernel_size=pooling // 4, stride=pooling // 4)
         )
 
     def forward(self, X):
-        batch_size, seq_length, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
+        batch_size, seq_length, num_channels, series = X.shape
         X = X.view(batch_size * seq_length, num_channels, series)
-        y = torch.abs(torch.fft.rfft(X, dim=2))
-        freq = torch.fft.rfftfreq(series, 1 / self.sample_rate).expand(y.shape[0], 1, y.shape[2]).to(y.device)
-        y = torch.cat((y, freq), dim=1)
-        y = self.block(y)
-        y = y.view(batch_size, seq_length, -1)
-        return y
+        X = self.block(X)
+        return X
 
 
-class AttentionLayer(nn.Module):
-    def __init__(self, input_feature1, input_feature2, hiddens, **kwargs):
-        super(AttentionLayer, self).__init__(**kwargs)
-        self.input_feature1 = input_feature1
-        self.input_feature2 = input_feature2
-        self.hiddens = hiddens
-        self.V1 = nn.Linear(input_feature1, hiddens)
-        self.K1 = nn.Linear(input_feature1, hiddens)
-        self.alpha1 = hiddens / input_feature1
-        self.V2 = nn.Linear(input_feature2, hiddens)
-        self.K2 = nn.Linear(input_feature2, hiddens)
-        self.alpha2 = hiddens / input_feature2
-        self.Q = nn.Linear(hiddens, 1)
-        self.activate1 = nn.Sigmoid()
-        self.activate2 = nn.Sigmoid()
-
-    def forward(self, X1, X2):
-        batch_size, seq_length = X1.shape[0], X1.shape[1]
-        X1, X2 = X1.view(batch_size * seq_length, -1), X2.view(batch_size * seq_length, -1)
-        v1, k1 = self.V1(X1) * self.alpha1, self.K1(X1) * self.alpha1
-        v2, k2 = self.V2(X2) * self.alpha2, self.K2(X2) * self.alpha2
-        c1, c2 = self.Q(k1) / self.hiddens, self.Q(k2) / self.hiddens
-        c1, c2 = self.activate1(c1), self.activate2(c2)
-        output = c1 * v1 + c2 * v2
-        output = output.view(batch_size, seq_length, -1)
-        return output
-
-
-class GRULayer(nn.Module):
-    def __init__(self, input_features, hiddens, **kwargs):
-        super(GRULayer, self).__init__(**kwargs)
-        self.input_features = input_features
-        self.hiddens = hiddens
-        self.block = nn.GRU(input_features, hiddens, batch_first=True, bidirectional=True)
-
-    def get_initial_state(self, batch_size, device):
-        return torch.zeros((2, batch_size, self.hiddens), dtype=torch.float32, device=device)
+class CNNencoders(nn.Module):
+    def __init__(self, input_channels, dropout, **kwargs):
+        super(CNNencoders, self).__init__(**kwargs)
+        self.input_channels = input_channels
+        self.dropout = dropout
+        self.encoder1 = MultiScaleCNN(input_channels, 64, 128, 400, 50, 8, dropout)
+        self.encoder2 = MultiScaleCNN(input_channels, 64, 128, 200, 25, 8, dropout)
+        self.encoder3 = MultiScaleCNN(input_channels, 64, 128, 100, 12, 8, dropout)
+        self.encoder4 = MultiScaleCNN(input_channels, 64, 128, 50, 6, 8, dropout)
 
     def forward(self, X):
-        H0 = self.get_initial_state(X.shape[0], X.device)
-        (output, Hn) = self.block(X, H0)
-        if not output.is_contiguous():
-            output = output.contiguous()
+        X1 = self.encoder1(X)
+        X2 = self.encoder2(X)
+        X3 = self.encoder3(X)
+        X4 = self.encoder4(X)
+        output = torch.cat((X1, X2, X3, X4), dim=2)
+        output = output.permute(0, 2, 1).contiguous()
         return output
+
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, max_len=256, **kwargs):
+        super(PositionalEncoding, self).__init__(**kwargs)
+        self.pe = torch.zeros((max_len, d_model), dtype=torch.float32, requires_grad=False)
+        position = torch.arange(0, max_len, dtype=torch.float32, requires_grad=False).unsqueeze(1)
+        div_term = torch.arange(0, d_model, 2, dtype=torch.float32, requires_grad=False)
+        div_term = torch.exp(div_term * (-math.log(10000.0) / d_model))
+        self.pe[:, 0::2] = torch.sin(position * div_term)
+        self.pe[:, 1::2] = torch.cos(position * div_term)
+        self.pe = self.pe.unsqueeze(0)
+
+    def forward(self, X):
+        batch_size, seq_length, d_model = X.shape
+        X = X + self.pe[:, :seq_length, :].to(X.device)
+        return X
+
+
+class ShortTermEncoder(nn.Module):
+    def __init__(self, embeddings, heads, layers, dropout, keep=4, **kwargs):
+        super(ShortTermEncoder, self).__init__(**kwargs)
+        self.embeddings = embeddings
+        self.heads = heads
+        self.layers = layers
+        self.dropout = dropout
+        self.keep = keep
+        self.positional_encoding = PositionalEncoding(embeddings)
+        self.transformers = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            num_layers=layers
+        )
+
+    def forward(self, X):
+        X = self.positional_encoding(X)
+        X = self.transformers(X)
+        X = X[:, :self.keep, :]
+        X = X.view(X.shape[0], -1)
+        return X
+
+
+class LongTermEncoder(nn.Module):
+    def __init__(self, embeddings, heads, layers, dropout, **kwargs):
+        super(LongTermEncoder, self).__init__(**kwargs)
+        self.embeddings = embeddings
+        self.heads = heads
+        self.layers = layers
+        self.dropout = dropout
+        self.positional_encoding = PositionalEncoding(embeddings)
+        self.transformers = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            num_layers=layers
+        )
+
+    def forward(self, X):
+        batch_size, seq_length, embeddings = X.shape
+        X = self.positional_encoding(X)
+        X = self.transformers(X)
+        X = X.view(batch_size * seq_length, embeddings)
+        return X
 
 
 class SleepNet(nn.Module):
@@ -125,33 +118,23 @@ class SleepNet(nn.Module):
         super(SleepNet, self).__init__(**kwargs)
         self.input_channels = input_channels
         self.dropout = dropout
-        self.encoder1 = RawDataEncoder(input_channels, dropout)
-        self.encoder2 = FrequencyEncoder(input_channels, dropout)
-        self.attention = AttentionLayer(2688, 1152, 512)
-        self.resblock = nn.Linear(512, 512)
-        self.gru = GRULayer(512, 256)
+        self.cnn = CNNencoders(input_channels, dropout)
+        self.short_term_encoder = ShortTermEncoder(128, 8, 2, dropout)
+        self.long_term_encoder = LongTermEncoder(512, 8, 2, dropout)
         self.classifier = nn.Sequential(
+            nn.Linear(512, 256),
             nn.LeakyReLU(0.1), nn.Dropout(dropout),
-            nn.Linear(1024, 512),
-            nn.LeakyReLU(0.1), nn.Dropout(dropout),
-            nn.Linear(512, 5)
+            nn.Linear(256, 5)
         )
 
     def forward(self, X):
-        batch_size, seq_length, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
-        f1 = self.encoder1(X)
-        f2 = self.encoder2(X)
-        f = self.attention(f1, f2)
-        r = self.resblock(f.view(batch_size * seq_length, -1))
-        f = self.gru(f).view(batch_size * seq_length, -1)
-        f = torch.cat((f, r), dim=1)
-        output = self.classifier(f)
-        return output
-
-    def freeze_parameters(self):
-        self.encoder1.eval()
-        self.encoder2.eval()
-        self.attention.eval()
+        batch_size, seq_length, num_channels, series = X.shape
+        X = self.cnn(X)
+        X = self.short_term_encoder(X)
+        X = X.view(batch_size, seq_length, -1)
+        X = self.long_term_encoder(X)
+        X = self.classifier(X)
+        return X
 
 
 def init_weight(module):
@@ -161,6 +144,6 @@ def init_weight(module):
 
 if __name__ == '__main__':
     X = torch.randn((4, 10, 2, 3000))
-    net = SleepNet(2, 0.5)
+    net = SleepNet(2, 0.25)
     print(net(X).shape)
-    torch.save(net.state_dict(), 'MSleepNet.pth')
+    torch.save(net.state_dict(), 'SleepNet.pth')
