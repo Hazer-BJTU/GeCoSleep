@@ -1,8 +1,5 @@
-import torch
 import random
-from torch import nn
-from models import *
-from generator import *
+from EEGGR.generator import *
 from matplotlib import pyplot as plt
 from data_preprocessing import *
 

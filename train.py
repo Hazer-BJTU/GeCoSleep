@@ -1,8 +1,5 @@
 from clnetworks import *
-from models import *
-from torch.utils.data import DataLoader
-from data_preprocessing import *
-from EEGGR import *
+from EEGGR.EEGGR import *
 import sys
 
 
