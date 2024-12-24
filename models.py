@@ -121,10 +121,15 @@ class SleepNet(nn.Module):
         self.cnn = CNNencoders(input_channels, dropout)
         self.short_term_encoder = ShortTermEncoder(128, 8, 2, dropout)
         self.long_term_encoder = LongTermEncoder(512, 8, 2, dropout)
-        self.classifier = nn.Sequential(
-            nn.Linear(512, 256),
+        self.resblock = nn.Sequential(
+            nn.Linear(512, 768),
             nn.LeakyReLU(0.1), nn.Dropout(dropout),
-            nn.Linear(256, 5)
+            nn.Linear(768, 512)
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(1024, 512),
+            nn.LeakyReLU(0.1), nn.Dropout(dropout),
+            nn.Linear(512, 5)
         )
 
     def forward(self, X):
@@ -132,7 +137,9 @@ class SleepNet(nn.Module):
         X = self.cnn(X)
         X = self.short_term_encoder(X)
         X = X.view(batch_size, seq_length, -1)
+        r = self.resblock(X.view(batch_size * seq_length, -1))
         X = self.long_term_encoder(X)
+        X = torch.cat((r, X), dim=1)
         X = self.classifier(X)
         return X
 
