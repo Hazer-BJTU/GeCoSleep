@@ -6,173 +6,125 @@ from models import *
 from data_preprocessing import *
 
 
-class ResBlock(nn.Module):
-    def __init__(self, channels, norm_type, **kwargs):
-        super(ResBlock, self).__init__(**kwargs)
-        self.channels = channels
-        self.norm_type = norm_type
-        self.block = None
-        if norm_type == 'instance':
-            self.block = nn.Sequential(
-                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding=4),
-                nn.InstanceNorm1d(channels, affine=True), nn.LeakyReLU(0.1),
-                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding=4),
-                nn.InstanceNorm1d(channels, affine=True)
-            )
-        elif norm_type == 'batch':
-            self.block = nn.Sequential(
-                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding=4),
-                nn.BatchNorm1d(channels), nn.LeakyReLU(0.1),
-                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding=4),
-                nn.BatchNorm1d(channels)
-            )
-        self.activate = nn.LeakyReLU(0.1)
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, max_len=256, **kwargs):
+        super(PositionalEncoding, self).__init__(**kwargs)
+        self.pe = torch.zeros((max_len, d_model), dtype=torch.float32, requires_grad=False)
+        position = torch.arange(0, max_len, dtype=torch.float32, requires_grad=False).unsqueeze(1)
+        div_term = torch.arange(0, d_model, 2, dtype=torch.float32, requires_grad=False)
+        div_term = torch.exp(div_term * (-math.log(10000.0) / d_model))
+        self.pe[:, 0::2] = torch.sin(position * div_term)
+        self.pe[:, 1::2] = torch.cos(position * div_term)
+        self.pe = self.pe.unsqueeze(0)
 
     def forward(self, X):
-        return self.activate(self.block(X) + X)
-
-
-class Distribution(nn.Module):
-    def __init__(self, input_channels, hiddens, output_channels, **kwargs):
-        super(Distribution, self).__init__(**kwargs)
-        self.input_channels = input_channels
-        self.hiddens = hiddens
-        self.output_channels = output_channels
-        self.mean = nn.Sequential(
-            nn.Conv1d(input_channels, hiddens, kernel_size=9, stride=1, padding=4),
-            nn.BatchNorm1d(hiddens), nn.LeakyReLU(0.1),
-            nn.Conv1d(hiddens, output_channels, kernel_size=9, stride=1, padding=4)
-        )
-        self.std = nn.Sequential(
-            nn.Conv1d(input_channels, hiddens, kernel_size=9, stride=1, padding=4),
-            nn.BatchNorm1d(hiddens), nn.LeakyReLU(0.1),
-            nn.Conv1d(hiddens, output_channels, kernel_size=9, stride=1, padding=4),
-            nn.Softplus()
-        )
-
-    def forward(self, X):
-        return self.mean(X), self.std(X)
-
-
-class UpSampler(nn.Module):
-    def __init__(self, input_channels, output_channels, kernel_size, stride, **kwargs):
-        super(UpSampler, self).__init__(**kwargs)
-        self.input_channels = input_channels
-        self.output_channels = output_channels
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.block = nn.Sequential(
-            ResBlock(input_channels, 'instance'), ResBlock(input_channels, 'instance'),
-            nn.ConvTranspose1d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
-            nn.InstanceNorm1d(output_channels, affine=True), nn.LeakyReLU(0.1),
-        )
-
-    def forward(self, X):
-        return self.block(X)
-
-
-class DownSampler(nn.Module):
-    def __init__(self, input_channels, output_channels, kernel_size, stride, **kwargs):
-        super(DownSampler, self).__init__(**kwargs)
-        self.input_channels = input_channels
-        self.output_channels = output_channels
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.block = nn.Sequential(
-            nn.Conv1d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
-            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
-            ResBlock(output_channels, 'batch'), ResBlock(output_channels, 'batch')
-        )
-
-    def forward(self, X):
-        return self.block(X)
-
-
-class Encoder(nn.Module):
-    def __init__(self, input_channels, **kwargs):
-        super(Encoder, self).__init__(**kwargs)
-        self.input_channels = input_channels
-        self.down1 = DownSampler(input_channels, 16, kernel_size=8, stride=8)
-        self.dist1 = Distribution(16, 32, 16)
-        self.down2 = DownSampler(16, 32, kernel_size=4, stride=4)
-        self.dist2 = Distribution(32, 64, 32)
-        self.down3 = DownSampler(32, 64, kernel_size=4, stride=4)
-        self.dist3 = Distribution(64, 128, 64)
-        self.down4 = DownSampler(64, 128, kernel_size=4, stride=4)
-        self.dist4 = Distribution(128, 256, 256)
-
-    def forward(self, X):
-        batch_size, window_size, num_channels, series = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
-        X = X.permute(0, 1, 3, 2).contiguous()
-        X = X.view(batch_size, window_size * series, num_channels)
-        X = X.permute(0, 2, 1).contiguous()
-        X1 = self.down1(X)
-        mu1, sigma1 = self.dist1(X1)
-        X2 = self.down2(X1)
-        mu2, sigma2 = self.dist2(X2)
-        X3 = self.down3(X2)
-        mu3, sigma3 = self.dist3(X3)
-        X4 = self.down4(X3)
-        mu4, sigma4 = self.dist4(X4)
-        return [(mu1, sigma1), (mu2, sigma2), (mu3, sigma3), (mu4, sigma4)]
-
-
-class Decoder(nn.Module):
-    def __init__(self, output_channels, **kwargs):
-        super(Decoder, self).__init__(**kwargs)
-        self.output_channels = output_channels
-        self.up1 = UpSampler(256, 64, 6, 4)
-        self.up2 = UpSampler(128, 32, 5, 4)
-        self.up3 = UpSampler(64, 16, 6, 4)
-        self.up4 = UpSampler(32, 32, 8, 8)
-        self.last_layer = nn.Sequential(
-            nn.Conv1d(32, 32, kernel_size=9, stride=1, padding='same'),
-            nn.InstanceNorm1d(32, affine=True), nn.LeakyReLU(0.1),
-            nn.Conv1d(32, output_channels, kernel_size=9, stride=1, padding='same')
-        )
-
-    def forward(self, Z):
-        Z1 = self.up1(Z[3])
-        Z2 = self.up2(torch.cat((Z[2], Z1), dim=1))
-        Z3 = self.up3(torch.cat((Z[1], Z2), dim=1))
-        Z4 = self.up4(torch.cat((Z[0], Z3), dim=1))
-        X = self.last_layer(Z4)
-        batch_size, num_channels, series = X.shape[0], X.shape[1], X.shape[2]
-        X = X.permute(0, 2, 1).contiguous()
-        X = X.view(batch_size, -1, 3000, num_channels)
-        X = X.permute(0, 1, 3, 2).contiguous()
+        batch_size, seq_length, d_model = X.shape
+        X = X + self.pe[:, :seq_length, :].to(X.device)
         return X
 
-    def generate(self, batch_size, device):
-        Z = [torch.randn((batch_size, 16, 3750), dtype=torch.float32, requires_grad=False, device=device),
-             torch.randn((batch_size, 32, 937), dtype=torch.float32, requires_grad=False, device=device),
-             torch.randn((batch_size, 64, 234), dtype=torch.float32, requires_grad=False, device=device),
-             torch.randn((batch_size, 256, 58), dtype=torch.float32, requires_grad=False, device=device)]
-        return self.forward(Z)
+
+class VAEencoder(nn.Module):
+    def __init__(self, embeddings, hiddens, heads, layers, dropout, **kwargs):
+        super(VAEencoder, self).__init__(**kwargs)
+        self.embeddings = embeddings
+        self.hiddens = hiddens
+        self.heads = heads
+        self.layers = layers
+        self.dropout = dropout
+        self.positional_encoding = PositionalEncoding(embeddings)
+        self.block1 = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            num_layers=layers
+        )
+        self.label2vec = nn.Embedding(5, embeddings)
+        self.block2 = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            num_layers=layers
+        )
+        self.mean = nn.Sequential(
+            nn.Linear(embeddings, hiddens), nn.LeakyReLU(0.1),
+            nn.Linear(hiddens, embeddings)
+        )
+        self.std = nn.Sequential(
+            nn.Linear(embeddings, hiddens), nn.LeakyReLU(0.1),
+            nn.Linear(hiddens, embeddings), nn.Softplus()
+        )
+
+    def forward(self, X, y):
+        batch_size, seq_length, embeddings = X.shape
+        X = self.positional_encoding(X)
+        X = self.block1(X)
+        y = y.view(batch_size * seq_length)
+        y = self.label2vec(y)
+        y = y.view(batch_size, seq_length, embeddings)
+        X = X + y
+        X = self.block2(X)
+        X = X.view(batch_size * seq_length, embeddings)
+        mu, sigma = self.mean(X), self.std(X)
+        mu = mu.view(batch_size, seq_length, embeddings)
+        sigma = sigma.view(batch_size, seq_length, embeddings)
+        return mu, sigma
 
 
-class EEGVAE(nn.Module):
-    def __init__(self, input_channels, **kwargs):
-        super(EEGVAE, self).__init__(**kwargs)
-        self.encoder = Encoder(input_channels)
-        self.decoder = Decoder(input_channels)
+class VAEdecoder(nn.Module):
+    def __init__(self, embeddings, heads, layers, dropout, **kwargs):
+        super(VAEdecoder, self).__init__(**kwargs)
+        self.embeddings = embeddings
+        self.heads = heads
+        self.layers = layers
+        self.dropout = dropout
+        self.positional_encoding = PositionalEncoding(embeddings)
+        self.block1 = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            num_layers=layers
+        )
+        self.label2vec = nn.Embedding(5, embeddings)
+        self.block2 = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            num_layers=layers
+        )
 
-    def forward(self, X):
-        distributions = self.encoder(X)
-        kl_loss, Z = 0, []
-        for mu, sigma in distributions:
-            eps = torch.randn_like(mu, requires_grad=False)
-            z = sigma * eps + mu
-            Z.append(z)
-            kl_loss += torch.mean(-2 * torch.log(sigma) + sigma.pow(2) + mu.pow(2) - 1) * 0.5
-        X_hat = self.decoder(Z)
+    def forward(self, X, y):
+        batch_size, seq_length, embeddings = X.shape
+        X = self.positional_encoding(X)
+        X = self.block1(X)
+        y = y.view(batch_size * seq_length)
+        y = self.label2vec(y)
+        y = y.view(batch_size, seq_length, embeddings)
+        X = X + y
+        X = self.block2(X)
+        return X
+
+    def generate(self, y):
+        batch_size, seq_length = y.shape
+        z = torch.randn((batch_size, seq_length, self.embeddings),
+                        dtype=torch.float32, requires_grad=False, device=y.deivce)
+        X_hat = self.forward(z, y)
+        return X_hat
+
+
+class VAE(nn.Module):
+    def __init__(self, embeddings, dropout, **kwargs):
+        super(VAE, self).__init__(**kwargs)
+        self.embeddings = embeddings
+        self.hiddens = int(embeddings * 1.5)
+        self.dropout = dropout
+        self.encoder = VAEencoder(embeddings, self.hiddens, 8, 2, dropout)
+        self.decoder = VAEdecoder(embeddings, 8, 1, dropout)
+
+    def forward(self, X, y):
+        mu, sigma = self.encoder(X, y)
+        eps = torch.randn_like(mu, requires_grad=False)
+        z = eps * sigma + mu
+        X_hat = self.decoder(z, y)
+        kl_loss = torch.mean(-2 * torch.log(sigma) + sigma.pow(2) + mu.pow(2) - 1) * 0.5
         return X_hat, kl_loss
 
 
 if __name__ == '__main__':
-    X = torch.randn((4, 10, 2, 3000), dtype=torch.float32, requires_grad=False)
-    net = EEGVAE(2)
-    X_hat, kl_loss = net(X)
+    net = VAE(512, 0.1)
+    X = torch.randn((4, 10, 512), dtype=torch.float32, requires_grad=False)
+    y = torch.randint(0, 5, (4, 10), dtype=torch.int64, requires_grad=False)
+    X_hat, kl_loss = net(X, y)
     print(X_hat.shape, kl_loss)
-    print(net.decoder.generate(8, 'cpu').shape)
-    torch.save(net.state_dict(), 'EEGVAE.pth')
+    torch.save(net.state_dict(), 'VAE.pth')
