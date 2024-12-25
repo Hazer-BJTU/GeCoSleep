@@ -10,7 +10,7 @@ class EEGGRnetwork(CLnetwork):
         '''generator settings'''
         self.start_training_generator = False
         self.num_epochs_solver = self.args.num_epochs - self.args.num_epochs_generator
-        self.generator = VAE(512, 0.05)
+        self.generator = VAE(512, 0)
         self.optimizerG = torch.optim.Adam(self.generator.parameters(), lr=args.lr_generator)
         self.schedulerG = None
         self.rec_loss, self.kl_loss, self.task_loss = 0, 0, 0
