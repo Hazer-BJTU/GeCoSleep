@@ -159,6 +159,9 @@ class SleepNet(nn.Module):
         return X
 
     def freeze_parameters(self):
+        for m in self.cnn.modules():
+            if isinstance(m, nn.BatchNorm1d):
+                m.eval()
         for name, param in self.cnn.named_parameters():
             param.requires_grad = False
         for name, param in self.short_term_encoder.named_parameters():
