@@ -1,8 +1,6 @@
 import copy
-import random
 import torch.nn
 from clnetworks import CLnetwork
-from models import *
 from generator import *
 
 
@@ -12,13 +10,12 @@ class EEGGRnetwork(CLnetwork):
         '''generator settings'''
         self.start_training_generator = False
         self.num_epochs_solver = self.args.num_epochs - self.args.num_epochs_generator
-        self.generator = EEGVAE(2)
+        self.generator = VAE(512, 0.05)
         self.optimizerG = torch.optim.Adam(self.generator.parameters(), lr=args.lr_generator)
         self.schedulerG = None
         self.rec_loss, self.kl_loss, self.task_loss = 0, 0, 0
         self.generator.to(self.device)
         self.mseloss = nn.MSELoss()
-        self.mseloss_noreduction = nn.MSELoss(reduction='none')
         '''replay settings'''
         self.teacher_model = SleepNet(2, args.dropout)
         self.teacher_model.to(self.device)
@@ -53,7 +50,8 @@ class EEGGRnetwork(CLnetwork):
         self.start_training_generator = False
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, max(self.num_epochs_solver // 6, 1), 0.6)
         self.optimizerG = torch.optim.Adam(self.generator.parameters(), lr=self.args.lr_generator)
-        self.schedulerG = torch.optim.lr_scheduler.StepLR(self.optimizerG, max(self.args.num_epochs_generator // 6, 1), 0.6)
+        self.schedulerG = torch.optim.lr_scheduler.StepLR(self.optimizerG, max(self.args.num_epochs_generator // 6, 1),
+                                                          0.6)
         '''replay settings
         if self.task > 0:
             self.teacher_model.load_state_dict(torch.load(self.best_net_memory[-1], map_location=self.device, weights_only=True))
@@ -64,9 +62,9 @@ class EEGGRnetwork(CLnetwork):
         '''generator settings'''
         self.rec_loss, self.kl_loss, self.task_loss = 0, 0, 0
         self.generator.train()
-        '''generate replay buffer'''
+        '''generate replay buffer
         if self.task > 0 and not self.start_training_generator and self.epoch % self.args.generate_epoch == 0:
-            self.generate_replay_buffer()
+            self.generate_replay_buffer()'''
 
     def observe(self, X, y, first_time=False):
         if self.epoch < self.num_epochs_solver:
@@ -75,17 +73,18 @@ class EEGGRnetwork(CLnetwork):
             y_hat = self.net(X)
             L_current = self.loss(y_hat, y.view(-1))
             L = torch.mean(L_current)
+            '''
             if self.task > 0:
-                '''perform generative replay'''
-                '''print(f'start generative replay on {len(self.generators)} tasks:')'''
+                perform generative replay
+                print(f'start generative replay on {len(self.generators)} tasks:')
                 X_replay, y_replay = self.replay_buffer[0], self.replay_buffer[1]
                 y_replay_hat = self.net(X_replay)
                 loss_weights = self.replay_coef / torch.sum(self.replay_coef)
                 L_replay = torch.mean(self.mseloss_noreduction(y_replay_hat, y_replay), dim=1)
                 L_replay = torch.sum(L_replay * loss_weights) * self.args.theta
                 L = L + L_replay
+            '''
             L.backward()
-            nn.utils.clip_grad_norm_(self.net.parameters(), max_norm=20, norm_type=2)
             self.optimizer.step()
             self.train_loss += L.item()
             self.cnt += 1
@@ -103,13 +102,13 @@ class EEGGRnetwork(CLnetwork):
             X, y = X.to(self.device), y.to(self.device)
             self.optimizerG.zero_grad()
             self.optimizer.zero_grad()
-            X_hat, L_kl = self.generator(X)
-            L_rec = self.mseloss(X_hat, X)
-            pred_true = self.net(X).detach()
-            pred_fake = self.net(X_hat)
+            F = self.net.features(X).detach()
+            F_hat, L_kl = self.generator(F, y)
+            L_rec = self.mseloss(F_hat, F)
+            pred_true = self.net.classify(F).detach()
+            pred_fake = self.net.classify(F_hat)
             L_task = torch.mean(self.loss(pred_fake, pred_true.softmax(dim=1)))
             (L_rec + self.args.alpha * L_task + self.args.beta * L_kl).backward()
-            nn.utils.clip_grad_norm_(self.generator.parameters(), max_norm=20, norm_type=2)
             self.optimizerG.step()
             self.rec_loss += L_rec.item()
             self.kl_loss += L_kl.item()
@@ -131,4 +130,3 @@ class EEGGRnetwork(CLnetwork):
         generator_path = './modelsaved/generator_task' + str(self.task - 1) + '_fold' + str(self.flod_num) + '.pth'
         torch.save(self.generator.state_dict(), generator_path)
         self.generators.append(copy.deepcopy(self.generator.decoder))
-        
