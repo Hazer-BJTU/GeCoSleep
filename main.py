@@ -1,6 +1,4 @@
-from data_preprocessing import *
 from train import *
-from models import *
 import argparse
 
 parser = argparse.ArgumentParser(description='experiment settings')
@@ -35,7 +33,7 @@ parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='
 parser.add_argument('--min_epoch', type=float, nargs='?', default=15, help='min epochs for model saving')
 '''generative replay settings'''
 parser.add_argument('--num_epochs_generator', type=int, nargs='?', default=100, help='number of epochs for generator')
-parser.add_argument('--lr_generator', type=float, nargs='?', default=1e-3, help='learning rate for generator')
+parser.add_argument('--lr_generator', type=float, nargs='?', default=1e-4, help='learning rate for generator')
 parser.add_argument('--alpha', type=float, nargs='?', default=1, help='coefficient of task loss')
 parser.add_argument('--beta', type=float, nargs='?', default=1, help='coefficient of kl loss')
 parser.add_argument('--gamma', type=float, nargs='?', default=2, help='coefficient of task weights')

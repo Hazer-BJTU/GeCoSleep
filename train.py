@@ -1,6 +1,6 @@
-from clnetworks import *
-from EEGGR.EEGGR import *
 import sys
+from clnetworks import *
+from EEGGR import *
 
 
 def train_cl(args, trains, valids, tests, fold_idx):
