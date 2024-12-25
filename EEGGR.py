@@ -16,6 +16,7 @@ class EEGGRnetwork(CLnetwork):
         self.rec_loss, self.kl_loss, self.task_loss = 0, 0, 0
         self.generator.to(self.device)
         self.mseloss = nn.MSELoss()
+        self.distloss = nn.KLDivLoss(reduction='batchmean')
         '''replay settings'''
         self.teacher_model = SleepNet(2, args.dropout)
         self.teacher_model.to(self.device)
@@ -107,7 +108,8 @@ class EEGGRnetwork(CLnetwork):
             L_rec = self.mseloss(F_hat, F)
             pred_true = self.net.classify(F).detach()
             pred_fake = self.net.classify(F_hat)
-            L_task = torch.mean(self.loss(pred_fake, pred_true.softmax(dim=1)))
+            pred_fake = nn.functional.log_softmax(pred_fake, dim=1)
+            L_task = self.distloss(pred_fake, pred_true.softmax(dim=1))
             (L_rec + self.args.alpha * L_task + self.args.beta * L_kl).backward()
             self.optimizerG.step()
             self.rec_loss += L_rec.item()
