@@ -158,6 +158,14 @@ class SleepNet(nn.Module):
         X = self.classifier(X)
         return X
 
+    def freeze_parameters(self):
+        self.cnn.eval()
+        self.short_term_encoder.eval()
+        for name, param in self.cnn.named_parameters():
+            param.requires_grad = False
+        for name, param in self.short_term_encoder.named_parameters():
+            param.requires_grad = False
+
 
 def init_weight(module):
     if isinstance(module, nn.Conv1d) or isinstance(module, nn.Linear):
