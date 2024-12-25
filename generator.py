@@ -106,7 +106,7 @@ class VAE(nn.Module):
         self.hiddens = int(embeddings * 1.5)
         self.dropout = dropout
         self.encoder = VAEencoder(embeddings, self.hiddens, 8, 2, dropout)
-        self.decoder = VAEdecoder(embeddings, 8, 1, dropout)
+        self.decoder = VAEdecoder(embeddings, 8, 2, dropout)
 
     def forward(self, X, y):
         mu, sigma = self.encoder(X, y)
