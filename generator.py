@@ -94,7 +94,7 @@ class VAEdecoder(nn.Module):
     def generate(self, y):
         batch_size, seq_length = y.shape
         z = torch.randn((batch_size, seq_length, self.embeddings),
-                        dtype=torch.float32, requires_grad=False, device=y.deivce)
+                        dtype=torch.float32, requires_grad=False, device=y.device)
         X_hat = self.forward(z, y)
         return X_hat
 
