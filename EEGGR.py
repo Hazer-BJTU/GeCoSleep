@@ -92,6 +92,7 @@ class EEGGRnetwork(CLnetwork):
                 '''perform generative replay for generator'''
                 F_fake = self.teacher_generator.decoder.generate(y).detach()
                 F = torch.cat((F, F_fake), dim=0)
+                y = torch.cat((y, y), dim=0)
             F_hat, L_kl = self.generator(F, y)
             L_rec = self.mseloss(F_hat, F)
             pred_true = self.net.classify(F).detach()
