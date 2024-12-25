@@ -143,6 +143,21 @@ class SleepNet(nn.Module):
         X = self.classifier(X)
         return X
 
+    def features(self, X):
+        batch_size, seq_length, num_channels, series = X.shape
+        X = self.cnn(X)
+        X = self.short_term_encoder(X)
+        X = X.view(batch_size, seq_length, -1)
+        return X
+
+    def classify(self, X):
+        batch_size, seq_length, embeddings = X.shape
+        r = self.resblock(X.view(batch_size * seq_length, -1))
+        X = self.long_term_encoder(X)
+        X = torch.cat((r, X), dim=1)
+        X = self.classifier(X)
+        return X
+
 
 def init_weight(module):
     if isinstance(module, nn.Conv1d) or isinstance(module, nn.Linear):
