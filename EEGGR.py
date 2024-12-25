@@ -63,9 +63,9 @@ class EEGGRnetwork(CLnetwork):
             L = torch.mean(L_current)
             if self.task > 0:
                 '''perform generative replay'''
-                X_fake = self.teacher_generator.decoder.generate(y).detach()
-                y_fake = self.teacher_model(X_fake).detach()
-                y_pred = self.net(X_fake)
+                F_fake = self.teacher_generator.decoder.generate(y).detach()
+                y_fake = self.teacher_model.classify(F_fake).detach()
+                y_pred = self.net.classify(F_fake)
                 y_pred = nn.functional.log_softmax(y_pred, dim=1)
                 L_replay = self.distloss(y_pred, y_fake.softmax(dim=1))
                 L = L + L_replay
