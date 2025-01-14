@@ -217,8 +217,6 @@ class SampleVAEdecoder(nn.Module):
         self.projection = nn.Sequential(
             nn.Conv1d(160, 128, kernel_size=9, stride=1, padding='same'),
             nn.InstanceNorm1d(128), nn.LeakyReLU(0.1),
-            nn.Conv1d(128, 128, kernel_size=9, stride=1, padding='same'),
-            nn.InstanceNorm1d(128), nn.LeakyReLU(0.1),
         )
         self.block = nn.Sequential(
             UpSample(128, 64, 5, 5),
