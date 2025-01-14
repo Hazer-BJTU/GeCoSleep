@@ -1,8 +1,5 @@
 from models import *
 from metric import *
-import copy
-import torch
-import random
 
 
 class CLnetwork:

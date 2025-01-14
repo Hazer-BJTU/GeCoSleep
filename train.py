@@ -1,6 +1,20 @@
 import sys
+import random
+import numpy as np
 from clnetworks import *
-from EEGGR import *
+from HCGRT.EEGGR import *
+from data_preprocessing import *
+
+
+def set_random_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
 
 
 def train_cl(args, trains, valids, tests, fold_idx):
@@ -63,6 +77,7 @@ def allocate_fold(args):
 
 
 def train_k_fold(args):
+    set_random_seed(args.random_seed)
     fold_task_test_idx, fold_task_valid_idx, fold_task_train_idx = allocate_fold(args)
     datas, labels = load_all_datasets(args)
     total_results = torch.zeros((args.task_num + 1, args.task_num, 2), dtype=torch.float32, requires_grad=False)
