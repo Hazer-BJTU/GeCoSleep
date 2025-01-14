@@ -19,9 +19,9 @@ class PositionalEncoding(nn.Module):
         return X
 
 
-class VAEencoder(nn.Module):
+class SequentialVAEencoder(nn.Module):
     def __init__(self, embeddings, hiddens, heads, layers, dropout, **kwargs):
-        super(VAEencoder, self).__init__(**kwargs)
+        super(SequentialVAEencoder, self).__init__(**kwargs)
         self.embeddings = embeddings
         self.hiddens = hiddens
         self.heads = heads
@@ -62,9 +62,9 @@ class VAEencoder(nn.Module):
         return mu, sigma
 
 
-class VAEdecoder(nn.Module):
+class SequentialVAEdecoder(nn.Module):
     def __init__(self, embeddings, heads, layers, dropout, **kwargs):
-        super(VAEdecoder, self).__init__(**kwargs)
+        super(SequentialVAEdecoder, self).__init__(**kwargs)
         self.embeddings = embeddings
         self.heads = heads
         self.layers = layers
@@ -99,14 +99,153 @@ class VAEdecoder(nn.Module):
         return X_hat
 
 
-class VAE(nn.Module):
+class SequentialVAE(nn.Module):
     def __init__(self, embeddings, dropout, **kwargs):
-        super(VAE, self).__init__(**kwargs)
+        super(SequentialVAE, self).__init__(**kwargs)
         self.embeddings = embeddings
         self.hiddens = int(embeddings * 1.5)
         self.dropout = dropout
-        self.encoder = VAEencoder(embeddings, self.hiddens, 8, 2, dropout)
-        self.decoder = VAEdecoder(embeddings, 8, 2, dropout)
+        self.encoder = SequentialVAEencoder(embeddings, self.hiddens, 8, 2, dropout)
+        self.decoder = SequentialVAEdecoder(embeddings, 8, 2, dropout)
+
+    def forward(self, X, y):
+        mu, sigma = self.encoder(X, y)
+        eps = torch.randn_like(mu, requires_grad=False)
+        z = eps * sigma + mu
+        X_hat = self.decoder(z, y)
+        kl_loss = torch.mean(-2 * torch.log(sigma) + sigma.pow(2) + mu.pow(2) - 1) * 0.5
+        return X_hat, kl_loss
+
+
+class ResBlock(nn.Module):
+    def __init__(self, channels, norm_type, **kwargs):
+        super(ResBlock, self).__init__(**kwargs)
+        self.channels = channels
+        self.norm_type = norm_type
+        self.block = None
+        if norm_type == 'batch':
+            self.block = nn.Sequential(
+                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding='same'),
+                nn.BatchNorm1d(channels), nn.LeakyReLU(0.1),
+                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding='same'),
+                nn.BatchNorm1d(channels)
+            )
+        elif norm_type == 'instance':
+            self.block = nn.Sequential(
+                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding='same'),
+                nn.InstanceNorm1d(channels), nn.LeakyReLU(0.1),
+                nn.Conv1d(channels, channels, kernel_size=9, stride=1, padding='same'),
+                nn.InstanceNorm1d(channels)
+            )
+        self.activate = nn.LeakyReLU(0.1)
+
+    def forward(self, X):
+        return self.activate(self.block(X) + X)
+
+
+class DownSample(nn.Module):
+    def __init__(self, input_channels, output_channels, kernel_size, stride, padding=0, **kwargs):
+        super(DownSample, self).__init__(**kwargs)
+        self.input_channels = input_channels
+        self.output_channels = output_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.block = nn.Sequential(
+            nn.Conv1d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.BatchNorm1d(output_channels),
+            ResBlock(output_channels, 'batch'), ResBlock(output_channels, 'batch')
+        )
+
+    def forward(self, X):
+        return self.block(X)
+
+
+class UpSample(nn.Module):
+    def __init__(self, input_channels, output_channels, kernel_size, stride, padding=0, **kwargs):
+        super(UpSample, self).__init__(**kwargs)
+        self.input_channels = input_channels
+        self.output_channels = output_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.block = nn.Sequential(
+            nn.ConvTranspose1d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.InstanceNorm1d(output_channels),
+            ResBlock(output_channels, 'instance'), ResBlock(output_channels, 'instance')
+        )
+
+    def forward(self, X):
+        return self.block(X)
+
+
+class SampleVAEencoder(nn.Module):
+    def __init__(self, input_channels, **kwargs):
+        super(SampleVAEencoder, self).__init__(**kwargs)
+        self.input_channels = input_channels
+        self.block = nn.Sequential(
+            nn.Conv1d(input_channels, 16, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(16), nn.LeakyReLU(0.1),
+            DownSample(16, 32, kernel_size=4, stride=4),
+            DownSample(32, 64, kernel_size=5, stride=5),
+            DownSample(64, 128, kernel_size=5, stride=5)
+        )
+        self.label2vec = nn.Embedding(5, 960)
+        self.mean = nn.Sequential(
+            nn.Conv1d(160, 128, kernel_size=9, stride=1, padding='same'), nn.LeakyReLU(0.1),
+            nn.Conv1d(128, 128, kernel_size=9, stride=1, padding='same')
+        )
+        self.std = nn.Sequential(
+            nn.Conv1d(160, 128, kernel_size=9, stride=1, padding='same'), nn.LeakyReLU(0.1),
+            nn.Conv1d(128, 128, kernel_size=9, stride=1, padding='same'), nn.Softplus()
+        )
+
+    def forward(self, X, y):
+        batch_size, seq_length, num_channels, series = X.shape
+        X = X.view(batch_size * seq_length, num_channels, series)
+        y = y.view(batch_size * seq_length)
+        X = self.block(X)
+        y = self.label2vec(y)
+        y = y.view(batch_size * seq_length, 32, -1)
+        X = torch.cat((X, y), dim=1)
+        return self.mean(X), self.std(X)
+
+
+class SampleVAEdecoder(nn.Module):
+    def __init__(self, input_channels, **kwargs):
+        super(SampleVAEdecoder, self).__init__(**kwargs)
+        self.input_channels = input_channels
+        self.label2vec = nn.Embedding(5, 960)
+        self.projection = nn.Sequential(
+            nn.Conv1d(160, 128, kernel_size=9, stride=1, padding='same'),
+            nn.InstanceNorm1d(128), nn.LeakyReLU(0.1),
+            nn.Conv1d(128, 128, kernel_size=9, stride=1, padding='same'),
+            nn.InstanceNorm1d(128), nn.LeakyReLU(0.1),
+        )
+        self.block = nn.Sequential(
+            UpSample(128, 64, 5, 5),
+            UpSample(64, 32, 5, 5),
+            UpSample(32, 16, 4, 4)
+        )
+        self.output = nn.Conv1d(16, input_channels, kernel_size=3, stride=1, padding=1)
+
+    def forward(self, X, y):
+        batch_size, seq_length = y.shape
+        y = y.view(batch_size * seq_length)
+        y = self.label2vec(y)
+        y = y.view(batch_size * seq_length, 32, -1)
+        X = torch.cat((X, y), dim=1)
+        X = self.projection(X)
+        X = self.block(X)
+        X = self.output(X)
+        X = X.view(batch_size, seq_length, self.input_channels, -1)
+        return X
+
+
+class SampleVAE(nn.Module):
+    def __init__(self, input_channels, **kwargs):
+        super(SampleVAE, self).__init__(**kwargs)
+        self.input_channels = input_channels
+        self.encoder = SampleVAEencoder(input_channels)
+        self.decoder = SampleVAEdecoder(input_channels)
 
     def forward(self, X, y):
         mu, sigma = self.encoder(X, y)
@@ -118,9 +257,16 @@ class VAE(nn.Module):
 
 
 if __name__ == '__main__':
-    net = VAE(512, 0.1)
+    '''
+    net = SequentialVAE(512, 0.1)
     X = torch.randn((4, 10, 512), dtype=torch.float32, requires_grad=False)
     y = torch.randint(0, 5, (4, 10), dtype=torch.int64, requires_grad=False)
     X_hat, kl_loss = net(X, y)
     print(X_hat.shape, kl_loss)
     torch.save(net.state_dict(), 'VAE.pth')
+    net = SampleVAE(2)
+    X = torch.randn((8, 10, 2, 3000), dtype=torch.float32, requires_grad=False)
+    y = torch.randint(0, 5, (8, 10), dtype=torch.int64, requires_grad=False)
+    X_hat, kl_loss = net(X, y)
+    print(X_hat.shape, kl_loss)
+    '''

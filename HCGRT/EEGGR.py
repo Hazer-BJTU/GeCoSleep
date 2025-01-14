@@ -10,7 +10,7 @@ class EEGGRnetwork(CLnetwork):
         '''generator settings'''
         self.start_training_generator = False
         self.num_epochs_solver = self.args.num_epochs - self.args.num_epochs_generator
-        self.generator = generator.VAE(512, 0)
+        self.generator = generator.SequentialVAE(512, 0)
         self.generator.apply(init_weight)
         self.optimizerG = torch.optim.Adam(self.generator.parameters(), lr=args.lr_generator)
         self.schedulerG = None
@@ -20,7 +20,7 @@ class EEGGRnetwork(CLnetwork):
         self.distloss = nn.KLDivLoss(reduction='batchmean')
         '''replay settings'''
         self.teacher_model = SleepNet(2, self.args.dropout)
-        self.teacher_generator = generator.VAE(512, 0)
+        self.teacher_generator = generator.SequentialVAE(512, 0)
         self.teacher_model.to(self.device)
         self.teacher_generator.to(self.device)
         self.best_generator_memory = []
