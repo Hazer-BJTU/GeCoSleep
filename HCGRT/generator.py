@@ -190,12 +190,12 @@ class SampleVAEencoder(nn.Module):
         )
         self.label2vec = nn.Embedding(5, 960)
         self.mean = nn.Sequential(
-            nn.Conv1d(160, 128, kernel_size=9, stride=1, padding='same'), nn.LeakyReLU(0.1),
-            nn.Conv1d(128, 128, kernel_size=9, stride=1, padding='same')
+            nn.Conv1d(160, 256, kernel_size=9, stride=1, padding='same'), nn.LeakyReLU(0.1),
+            nn.Conv1d(256, 128, kernel_size=9, stride=1, padding='same')
         )
         self.std = nn.Sequential(
-            nn.Conv1d(160, 128, kernel_size=9, stride=1, padding='same'), nn.LeakyReLU(0.1),
-            nn.Conv1d(128, 128, kernel_size=9, stride=1, padding='same'), nn.Softplus()
+            nn.Conv1d(160, 256, kernel_size=9, stride=1, padding='same'), nn.LeakyReLU(0.1),
+            nn.Conv1d(256, 128, kernel_size=9, stride=1, padding='same'), nn.Softplus()
         )
 
     def forward(self, X, y):
