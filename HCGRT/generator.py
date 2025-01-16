@@ -237,6 +237,13 @@ class SampleVAEdecoder(nn.Module):
         X = X.view(batch_size, seq_length, self.input_channels, -1)
         return X
 
+    def generate(self, y):
+        batch_size, seq_length = y.shape
+        z = torch.randn((batch_size * seq_length, 128, 30),
+                        dtype=torch.float32, requires_grad=False, device=y.device)
+        X_hat = self.forward(z, y)
+        return X_hat
+
 
 class SampleVAE(nn.Module):
     def __init__(self, input_channels, **kwargs):

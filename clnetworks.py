@@ -6,7 +6,8 @@ class CLnetwork:
     def __init__(self, args, fold_num):
         self.args = args
         self.flod_num = fold_num
-        self.net = SleepNet(2, args.dropout)
+        self.num_channels = len(args.isruc1)
+        self.net = SleepNet(self.num_channels, args.dropout)
         self.net.apply(init_weight)
         self.scheduler = None
         self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
