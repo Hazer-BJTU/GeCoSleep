@@ -279,6 +279,7 @@ class SampleVAE(nn.Module):
             z = eps * sigma + mu
             Zs.append(z)
             kl_loss += torch.mean(-2 * torch.log(sigma) + sigma.pow(2) + mu.pow(2) - 1) * 0.5
+        kl_loss = kl_loss / 5
         X_hat = self.decoder(Zs, y)
         return X_hat, kl_loss
 
