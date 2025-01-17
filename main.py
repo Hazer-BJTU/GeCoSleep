@@ -23,7 +23,7 @@ parser.add_argument('--window_size', type=int, nargs='?', default=10, help='leng
 parser.add_argument('--total_num', nargs='+', default={'ISRUC1': 100, 'SHHS': 200, 'MASS': 60, 'Sleep-EDF': 150},
                     help='number of examples for each task')
 parser.add_argument('--fold_num', type=int, nargs='?', default=10, help='number of a single fold')
-parser.add_argument('--num_epochs', type=int, nargs='?', default=200, help='number of epochs')
+parser.add_argument('--num_epochs', type=int, nargs='?', default=150, help='number of epochs')
 parser.add_argument('--batch_size', type=int, nargs='?', default=8, help='batch size')
 parser.add_argument('--valid_epoch', type=int, nargs='?', default=5, help='validating interval')
 parser.add_argument('--valid_batch', type=int, nargs='?', default=8, help='validating batch size')
@@ -33,7 +33,7 @@ parser.add_argument('--lr', type=float, nargs='?', default=1e-4, help='learning 
 parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='continual learning strategy')
 parser.add_argument('--min_epoch', type=float, nargs='?', default=15, help='min epochs for model saving')
 '''generative replay settings'''
-parser.add_argument('--num_epochs_generator', type=int, nargs='?', default=100, help='number of epochs for generator')
+parser.add_argument('--num_epochs_generator', type=int, nargs='?', default=50, help='number of epochs for generator')
 parser.add_argument('--lr_generator', type=float, nargs='?', default=1e-4, help='learning rate for generator')
 parser.add_argument('--alpha', type=float, nargs='?', default=1, help='coefficient of task loss')
 parser.add_argument('--beta', type=float, nargs='?', default=0.1, help='coefficient of kl loss')
