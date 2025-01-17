@@ -255,11 +255,11 @@ class SampleVAEdecoder(nn.Module):
     def generate(self, y):
         batch_size, seq_length = y.shape
         Zs = [
-            torch.randn((batch_size * seq_length, 4, 3000), dtype=torch.float32, requires_grad=False),
-            torch.randn((batch_size * seq_length, 32, 750), dtype=torch.float32, requires_grad=False),
-            torch.randn((batch_size * seq_length, 128, 150), dtype=torch.float32, requires_grad=False),
-            torch.randn((batch_size * seq_length, 256, 30), dtype=torch.float32, requires_grad=False),
-            torch.randn((batch_size * seq_length, 256, 6), dtype=torch.float32, requires_grad=False)
+            torch.randn((batch_size * seq_length, 4, 3000), dtype=torch.float32, requires_grad=False, device=y.device),
+            torch.randn((batch_size * seq_length, 32, 750), dtype=torch.float32, requires_grad=False, device=y.device),
+            torch.randn((batch_size * seq_length, 128, 150), dtype=torch.float32, requires_grad=False, device=y.device),
+            torch.randn((batch_size * seq_length, 256, 30), dtype=torch.float32, requires_grad=False, device=y.device),
+            torch.randn((batch_size * seq_length, 256, 6), dtype=torch.float32, requires_grad=False, device=y.device)
         ]
         X_hat = self.forward(Zs, y)
         return X_hat
