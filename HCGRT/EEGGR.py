@@ -115,6 +115,7 @@ class EEGGRnetwork(CLnetwork):
             pred_fake = self.net.features(X_hat)
             L_task = self.mseloss(pred_fake, pred_true)
             (L_rec + self.args.alpha * L_task + self.args.beta * L_kl).backward()
+            nn.utils.clip_grad_norm_(self.sample_gen.parameters(), max_norm=20, norm_type=2)
             self.optim_sample_gen.step()
             self.rec_loss[0] += L_rec.item()
             self.task_loss[0] += L_task.item()

@@ -249,6 +249,7 @@ class SampleVAEdecoder(nn.Module):
         Z4 = self.up3(Z3, Zs[1])
         Z5 = self.up4(Z4, Zs[0])
         X_hat = self.output(Z5)
+        X_hat = X_hat.view(batch_size, seq_length, -1, 3000)
         return X_hat
 
     def generate(self, y):
