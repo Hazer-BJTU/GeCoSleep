@@ -14,8 +14,8 @@ class EEGGRnetwork(CLnetwork):
         self.seq_gen = generator.SequentialVAE(512, 0)
         self.sample_gen.apply(init_weight)
         self.seq_gen.apply(init_weight)
-        self.optim_sample_gen = torch.optim.Adam(self.sample_gen.parameters(), lr=args.lr_generator)
-        self.optim_seq_gen = torch.optim.Adam(self.seq_gen.parameters(), lr=args.lr_generator)
+        self.optim_sample_gen = torch.optim.Adam(self.sample_gen.parameters(), lr=args.lr_sample_gen)
+        self.optim_seq_gen = torch.optim.Adam(self.seq_gen.parameters(), lr=args.lr_seq_gen)
         self.sched_sample_gen = None
         self.sched_seq_gen = None
         self.rec_loss, self.kl_loss, self.task_loss = [0, 0], [0, 0], [0, 0]
@@ -38,10 +38,10 @@ class EEGGRnetwork(CLnetwork):
         '''generator settings'''
         self.start_training_generator = False
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, max(self.num_epochs_solver // 6, 1), 0.6)
-        self.optim_sample_gen = torch.optim.Adam(self.sample_gen.parameters(), lr=self.args.lr_generator)
+        self.optim_sample_gen = torch.optim.Adam(self.sample_gen.parameters(), lr=self.args.lr_sample_gen)
         self.sched_sample_gen = torch.optim.lr_scheduler.StepLR(self.optim_sample_gen,
                                                                 max(self.args.num_epochs_generator // 6, 1), 0.6)
-        self.optim_seq_gen = torch.optim.Adam(self.seq_gen.parameters(), lr=self.args.lr_generator)
+        self.optim_seq_gen = torch.optim.Adam(self.seq_gen.parameters(), lr=self.args.lr_seq_gen)
         self.sched_seq_gen = torch.optim.lr_scheduler.StepLR(self.optim_seq_gen,
                                                              max(self.args.num_epochs_generator // 6, 1), 0.6)
         '''replay settings'''
