@@ -148,13 +148,13 @@ class DownSample(nn.Module):
         self.padding = padding
         self.block1 = nn.Sequential(
             nn.Conv1d(input_channels, output_channels, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
+            nn.InstanceNorm1d(output_channels, affine=True), nn.LeakyReLU(0.1),
             nn.Conv1d(output_channels, output_channels, kernel_size=3, stride=1, padding='same'),
-            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1)
+            nn.InstanceNorm1d(output_channels, affine=True), nn.LeakyReLU(0.1)
         )
         self.block2 = nn.Sequential(
             nn.Conv1d(output_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding),
-            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1)
+            nn.InstanceNorm1d(output_channels, affine=True), nn.LeakyReLU(0.1)
         )
 
     def forward(self, X):
