@@ -164,8 +164,6 @@ class SleepNet(nn.Module):
                 m.eval()
         for name, param in self.cnn.named_parameters():
             param.requires_grad = False
-        for name, param in self.short_term_encoder.named_parameters():
-            param.requires_grad = False
 
 
 def init_weight(module):
