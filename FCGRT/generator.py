@@ -61,11 +61,12 @@ class SequentialVAEencoder(nn.Module):
         y = y.view(batch_size, seq_length, embeddings)
         X[:, 1:, :] = X[:, 1:, :] + y
         X = self.block2(X)
-        X = X.view(batch_size * (seq_length + 1), embeddings)
+        X = X[:, 1:, :]
+        X = X.view(batch_size * seq_length, embeddings)
         mu, sigma = self.mean(X), self.std(X)
-        mu = mu.view(batch_size, seq_length + 1, embeddings)
-        sigma = sigma.view(batch_size, seq_length + 1, embeddings)
-        return mu[:, 1:, :], sigma[:, 1:, :]
+        mu = mu.view(batch_size, seq_length, embeddings)
+        sigma = sigma.view(batch_size, seq_length, embeddings)
+        return mu, sigma
 
 
 class SequentialVAEdecoder(nn.Module):
