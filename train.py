@@ -2,7 +2,7 @@ import sys
 import random
 import numpy as np
 from clnetworks import *
-from HCGRT.EEGGR import *
+from FCGRT.EEGGR import *
 from data_preprocessing import *
 
 
