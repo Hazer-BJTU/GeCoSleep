@@ -103,11 +103,11 @@ class SequentialVAEdecoder(nn.Module):
         X = self.block2(X)
         return X[:, 1:, :]
 
-    def generate(self, y):
+    def generate(self, y, t):
         batch_size, seq_length = y.shape
         z = torch.randn((batch_size, seq_length, self.embeddings),
                         dtype=torch.float32, requires_grad=False, device=y.device)
-        X_hat = self.forward(z, y)
+        X_hat = self.forward(z, y, t)
         return X_hat
 
 
