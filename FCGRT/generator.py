@@ -101,7 +101,8 @@ class SequentialVAEdecoder(nn.Module):
         y = y.view(batch_size, seq_length, embeddings)
         X[:, 1:, :] = X[:, 1:, :] + y
         X = self.block2(X)
-        return X[:, 1:, :]
+        X = X[:, 1:, :].contiguous()
+        return X
 
     def generate(self, y, t):
         batch_size, seq_length = y.shape
