@@ -128,7 +128,7 @@ class EEGGRnetwork(CLnetwork):
         if self.epoch < self.num_epochs_solver:
             super(EEGGRnetwork, self).end_epoch(valid_dataset)
             if self.task > 0:
-                print(f'task replay distribution: {torch.round(self.running_task_loss.softmax(dim=0), decimals=2)}')
+                print(f'task replay distribution: {torch.round(self.running_task_loss.softmax(dim=0), decimals=2).data}')
         else:
             lr_seq_gen = self.optim_seq_gen.state_dict()['param_groups'][0]['lr']
             print(f'epoch: {self.epoch}, '
