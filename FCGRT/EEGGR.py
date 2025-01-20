@@ -43,6 +43,7 @@ class EEGGRnetwork(CLnetwork):
         '''statistics settings'''
         if self.task > 0:
             self.running_task_loss = torch.zeros(self.task, dtype=torch.float32, requires_grad=False, device=self.device)
+            self.running_task_loss = torch.clamp(self.running_task_loss, min=1e-3)
 
     def start_epoch(self):
         super(EEGGRnetwork, self).start_epoch()
@@ -64,7 +65,7 @@ class EEGGRnetwork(CLnetwork):
             L = torch.mean(L_current)
             if self.task > 0:
                 '''perform generative replay'''
-                weights = self.running_task_loss.softmax(dim=0)
+                weights = self.running_task_loss / torch.sum(self.running_task_loss)
                 t = torch.multinomial(weights, y.shape[0], replacement=True)
                 F_fake = self.teacher_seq_gen.decoder.generate(y, t).detach()
                 y_fake = self.teacher_model.classify(F_fake).detach()
@@ -78,7 +79,10 @@ class EEGGRnetwork(CLnetwork):
                     delta[t[i]] += L_replay[i].item()
                     cnt[t[i]] += 1
                 delta = delta / torch.clamp(cnt, min=1.0)
-                self.running_task_loss = (1 - self.args.gamma) * self.running_task_loss + self.args.gamma * delta
+                for i in range(self.running_task_loss.shape[0]):
+                    if cnt[i] > 0:
+                        self.running_task_loss[i] = (1 - self.args.gamma) * self.running_task_loss[i] + self.args.gamma * delta[i]
+                        self.running_task_loss = torch.clamp(self.running_task_loss, min=1e-3)
             L.backward()
             self.optimizer.step()
             self.train_loss += L.item()
@@ -100,7 +104,7 @@ class EEGGRnetwork(CLnetwork):
             F = self.net.features(X).detach()
             if self.task > 0:
                 '''perform generative replay for sequential generator'''
-                weights = self.running_task_loss.softmax(dim=0)
+                weights = self.running_task_loss / torch.sum(self.running_task_loss)
                 t = torch.multinomial(weights, y.shape[0], replacement=True)
                 F_fake = self.teacher_seq_gen.decoder.generate(y, t).detach()
                 F_prime = torch.cat((F, F_fake), dim=0)
@@ -128,7 +132,8 @@ class EEGGRnetwork(CLnetwork):
         if self.epoch < self.num_epochs_solver:
             super(EEGGRnetwork, self).end_epoch(valid_dataset)
             if self.task > 0:
-                print(f'task replay distribution: {torch.round(self.running_task_loss.softmax(dim=0), decimals=2).data}')
+                weights = self.running_task_loss / torch.sum(self.running_task_loss)
+                print(f'task replay distribution: {torch.round(weights, decimals=2).data}')
         else:
             lr_seq_gen = self.optim_seq_gen.state_dict()['param_groups'][0]['lr']
             print(f'epoch: {self.epoch}, '
