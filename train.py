@@ -86,7 +86,7 @@ def train_k_fold(args):
         print(f'start fold {fold_idx}:')
         test_results = train_cl(args, trains, valids, tests, fold_idx)
         saved_stdout = sys.stdout
-        with open('temp_output.txt', 'a+') as file:
+        with open(args.temp_out, 'a+') as file:
             sys.stdout = file
             print(test_results)
         sys.stdout = saved_stdout
