@@ -24,6 +24,10 @@ def train_cl(args, trains, valids, tests, fold_idx):
         clnetwork = CLnetwork(args, fold_idx)
     elif args.replay_mode == 'generative':
         clnetwork = EEGGRnetwork(args, fold_idx)
+    elif args.replay_mode == 'fine_tuning':
+        clnetwork = FineTuning(args, fold_idx)
+    elif args.replay_mode == 'independent':
+        clnetwork = Independent(args, fold_idx)
     confusion = ConfusionMatrix(args.task_num)
     print('start first testing...')
     confusion = evaluate_tasks(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
