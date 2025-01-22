@@ -103,7 +103,7 @@ class EEGGRnetwork(CLnetwork):
             F = self.net.features(X).detach()
             if self.task > 0:
                 '''perform generative replay for sequential generator'''
-                t = torch.randint(0, self.task, y.shape[0], dtype=torch.int64, requires_grad=False, device=self.device)
+                t = torch.randint(0, self.task, [y.shape[0]], dtype=torch.int64, requires_grad=False, device=self.device)
                 F_fake = self.teacher_seq_gen.decoder.generate(y, t).detach()
                 F_prime = torch.cat((F, F_fake), dim=0)
                 y_prime = torch.cat((y, y), dim=0)
