@@ -42,8 +42,7 @@ class EEGGRnetwork(CLnetwork):
             print(f'generator loaded: {self.seq_gen_memory[-1]}')
         '''statistics settings'''
         if self.task > 0:
-            self.running_task_loss = torch.zeros(self.task, dtype=torch.float32, requires_grad=False, device=self.device)
-            self.running_task_loss = torch.clamp(self.running_task_loss, min=1e-3)
+            self.running_task_loss = torch.ones(self.task, dtype=torch.float32, requires_grad=False, device=self.device)
 
     def start_epoch(self):
         super(EEGGRnetwork, self).start_epoch()
