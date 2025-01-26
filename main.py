@@ -15,6 +15,7 @@ parser.add_argument('--mass', nargs='+', default=['C4', 'EogL'], help='channels 
 parser.add_argument('--sleep_edf_path', type=str, nargs='?',
                     default='/home/ShareData/sleep-edf-153-3chs', help='file path of sleepedf dataset')
 parser.add_argument('--sleep_edf', nargs='+', default=['Fpz-Cz', 'EOG'], help='channels of sleepedf')
+parser.add_argument('--normalize', type=bool, nargs='?', default=True, help='whether normalize samples in subjects')
 parser.add_argument('--task_num', type=int, nargs='?', default=4, help='number of tasks')
 parser.add_argument('--task_names', nargs='+', default=['ISRUC1', 'SHHS', 'MASS', 'Sleep-EDF'],
                     help='the list of task names')

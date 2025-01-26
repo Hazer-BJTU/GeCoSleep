@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
 
-def load_data_isruc1(filepath, window_size, channels, total_num):
+def load_data_isruc1(filepath, window_size, channels, total_num, normalize):
     file_names = [file for file in os.listdir(filepath) if file.endswith('.mat')]
     file_names.sort()
     datas, labels = [], []
@@ -18,8 +18,9 @@ def load_data_isruc1(filepath, window_size, channels, total_num):
         X = None
         for channel in channels:
             data_resampled = signal.resample(raw_data[channel], 3000, axis=1)
-            mu, sigma = np.mean(data_resampled), np.std(data_resampled)
-            data_resampled = (data_resampled - mu) / sigma
+            if normalize:
+                mu, sigma = np.mean(data_resampled), np.std(data_resampled)
+                data_resampled = (data_resampled - mu) / sigma
             '''
             print(f'calculating stft for channel {channel} in isruc1...')
             _, _, Zxx = signal.stft(data_resampled, 100, 'hann', 256)
@@ -45,7 +46,7 @@ def load_data_isruc1(filepath, window_size, channels, total_num):
     return datas, labels
 
 
-def load_data_shhs(filepath, window_size, channels, total_num):
+def load_data_shhs(filepath, window_size, channels, total_num, normalize):
     file_names = [file for file in os.listdir(filepath) if file.endswith('.pkl')]
     file_names.sort()
     shhs_channels = ['EEG', "EEG(sec)", 'EOG(L)', 'EMG']
@@ -62,8 +63,9 @@ def load_data_shhs(filepath, window_size, channels, total_num):
         for idx in range(raw_data_trans.shape[0]):
             series = raw_data_trans[idx]
             series = series.reshape(sleep_epoch_num, 3000)
-            mu, sigma = np.mean(series), np.std(series)
-            series = (series - mu) / sigma
+            if normalize:
+                mu, sigma = np.mean(series), np.std(series)
+                series = (series - mu) / sigma
             '''
             print(f'calculating stft for channel index {idx} in shhs...')
             _, _, Zxx = signal.stft(series, 100, 'hann', 256)
@@ -87,7 +89,7 @@ def load_data_shhs(filepath, window_size, channels, total_num):
     return datas, labels
 
 
-def load_data_mass(filepath, window_size, channels, total_num):
+def load_data_mass(filepath, window_size, channels, total_num, normalize):
     file_names = [file for file in os.listdir(filepath) if file.endswith('-Datasub.mat')]
     file_names.sort()
     mass_channels = ['FP1', 'FP2', 'Fz', 'F3', 'F4', 'F7', 'F8', 'C3', 'C4', 'T3', 'T4', 'Pz', 'P3', 'P4', 'T5',
@@ -102,8 +104,9 @@ def load_data_mass(filepath, window_size, channels, total_num):
         X = None
         for idx in range(raw_data_trans.shape[0]):
             series = raw_data_trans[idx]
-            mu, sigma = np.mean(series), np.std(series)
-            series = (series - mu) / sigma
+            if normalize:
+                mu, sigma = np.mean(series), np.std(series)
+                series = (series - mu) / sigma
             '''
             print(f'calculating stft for channel index {idx} in mass...')
             _, _, Zxx = signal.stft(series, 100, 'hann', 256)
@@ -130,7 +133,7 @@ def load_data_mass(filepath, window_size, channels, total_num):
     return datas, labels
 
 
-def load_data_sleepedf(filepath, window_size, channels, total_num):
+def load_data_sleepedf(filepath, window_size, channels, total_num, normalize):
     file_names = [file for file in os.listdir(filepath)]
     file_names.sort()
     sleepedf_channels = ['Fpz-Cz', 'EOG', 'EMG']
@@ -148,8 +151,9 @@ def load_data_sleepedf(filepath, window_size, channels, total_num):
         X = None
         for idx in range(raw_data_trans.shape[0]):
             series = raw_data_trans[idx]
-            mu, sigma = np.mean(series), np.std(series)
-            series = (series - mu) / sigma
+            if normalize:
+                mu, sigma = np.mean(series), np.std(series)
+                series = (series - mu) / sigma
             '''
             print(f'calculating stft for channel index {idx} in sleepedf...')
             _, _, Zxx = signal.stft(series, 100, 'hann', 256)
@@ -250,19 +254,19 @@ def load_all_datasets(args):
     datas, labels = [], []
     for task_name in args.task_names:
         if task_name == 'ISRUC1':
-            task_data, task_label = load_data_isruc1(args.isruc1_path, args.window_size, args.isruc1, args.total_num['ISRUC1'])
+            task_data, task_label = load_data_isruc1(args.isruc1_path, args.window_size, args.isruc1, args.total_num['ISRUC1'], args.normalize)
             datas.append(task_data)
             labels.append(task_label)
         elif task_name == 'SHHS':
-            task_data, task_label = load_data_shhs(args.shhs_path, args.window_size, args.shhs, args.total_num['SHHS'])
+            task_data, task_label = load_data_shhs(args.shhs_path, args.window_size, args.shhs, args.total_num['SHHS'], args.normalize)
             datas.append(task_data)
             labels.append(task_label)
         elif task_name == 'MASS':
-            task_data, task_label = load_data_mass(args.mass_path, args.window_size, args.mass, args.total_num['MASS'])
+            task_data, task_label = load_data_mass(args.mass_path, args.window_size, args.mass, args.total_num['MASS'], args.normalize)
             datas.append(task_data)
             labels.append(task_label)
         elif task_name == 'Sleep-EDF':
-            task_data, task_label = load_data_sleepedf(args.sleep_edf_path, args.window_size, args.sleep_edf, args.total_num['Sleep-EDF'])
+            task_data, task_label = load_data_sleepedf(args.sleep_edf_path, args.window_size, args.sleep_edf, args.total_num['Sleep-EDF'], args.normalize)
             datas.append(task_data)
             labels.append(task_label)
     return datas, labels
