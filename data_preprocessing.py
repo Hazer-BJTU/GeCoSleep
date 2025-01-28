@@ -254,19 +254,27 @@ def load_all_datasets(args):
     datas, labels = [], []
     for task_name in args.task_names:
         if task_name == 'ISRUC1':
-            task_data, task_label = load_data_isruc1(args.isruc1_path, args.window_size, args.isruc1, args.total_num['ISRUC1'], args.normalize)
+            normalize = args.normalize if task_name == args.task_names[0] else True
+            task_data, task_label = load_data_isruc1(args.isruc1_path, args.window_size, args.isruc1,
+                                                     args.total_num['ISRUC1'], normalize)
             datas.append(task_data)
             labels.append(task_label)
         elif task_name == 'SHHS':
-            task_data, task_label = load_data_shhs(args.shhs_path, args.window_size, args.shhs, args.total_num['SHHS'], args.normalize)
+            normalize = args.normalize if task_name == args.task_names[0] else True
+            task_data, task_label = load_data_shhs(args.shhs_path, args.window_size, args.shhs,
+                                                   args.total_num['SHHS'], normalize)
             datas.append(task_data)
             labels.append(task_label)
         elif task_name == 'MASS':
-            task_data, task_label = load_data_mass(args.mass_path, args.window_size, args.mass, args.total_num['MASS'], args.normalize)
+            normalize = args.normalize if task_name == args.task_names[0] else True
+            task_data, task_label = load_data_mass(args.mass_path, args.window_size, args.mass,
+                                                   args.total_num['MASS'], normalize)
             datas.append(task_data)
             labels.append(task_label)
         elif task_name == 'Sleep-EDF':
-            task_data, task_label = load_data_sleepedf(args.sleep_edf_path, args.window_size, args.sleep_edf, args.total_num['Sleep-EDF'], args.normalize)
+            normalize = args.normalize if task_name == args.task_names[0] else True
+            task_data, task_label = load_data_sleepedf(args.sleep_edf_path, args.window_size, args.sleep_edf,
+                                                       args.total_num['Sleep-EDF'], normalize)
             datas.append(task_data)
             labels.append(task_label)
     return datas, labels
