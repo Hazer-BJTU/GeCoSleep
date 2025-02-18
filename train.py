@@ -18,17 +18,17 @@ def set_random_seed(seed):
         torch.backends.cudnn.deterministic = True
 
 
-def train_cl(args, trains, valids, tests, fold_idx):
+def train_cl(args, trains, valids, tests, fold_idx, logs):
     test_results = []
     clnetwork = None
     if args.replay_mode == 'none':
-        clnetwork = CLnetwork(args, fold_idx)
+        clnetwork = CLnetwork(args, fold_idx, logs)
     elif args.replay_mode == 'generative':
-        clnetwork = EEGGRnetwork(args, fold_idx)
+        clnetwork = EEGGRnetwork(args, fold_idx, logs)
     elif args.replay_mode == 'fine_tuning':
-        clnetwork = FineTuning(args, fold_idx)
+        clnetwork = FineTuning(args, fold_idx, logs)
     elif args.replay_mode == 'independent':
-        clnetwork = Independent(args, fold_idx)
+        clnetwork = Independent(args, fold_idx, logs)
     confusion = ConfusionMatrix(args.task_num)
     print('start first testing...')
     confusion = evaluate_tasks(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
@@ -90,7 +90,7 @@ def train_k_fold(args):
     for fold_idx in range(len(fold_task_test_idx)):
         trains, valids, tests = create_fold_task_separated(fold_task_train_idx[fold_idx], fold_task_valid_idx[fold_idx], fold_task_test_idx[fold_idx], datas, labels)
         print(f'start fold {fold_idx}:')
-        test_results = train_cl(args, trains, valids, tests, fold_idx)
+        test_results = train_cl(args, trains, valids, tests, fold_idx, exp_log)
         exp_log.update_test_results(test_results, fold_idx)
         exp_log.write()
         for i in range(args.task_num + 1):
