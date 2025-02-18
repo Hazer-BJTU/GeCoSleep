@@ -140,12 +140,10 @@ def write_format(R, args, filepath='cl_output_record.txt', logs=None):
         print(f'BWT: {bwt:.3f}, BWT(mF1): {bwtf1:.3f}')
         print(f'FWT: {fwt:.3f}, FWT(mF1): {fwtf1:.3f}')
         if logs is not None:
-            logs.append(['performance'], {
-                'average': {'acc': aacc.item(), 'mF1': af1.item()},
-                'best': {'acc': bestacc.item(), 'mF1': bestmf1.item()},
-                'BWT': {'acc': bwt.item(), 'mF1': bwtf1.item()},
-                'FWT': {'acc': fwt.item(), 'mF1': fwtf1.item()}
-            })
+            logs.append(['performance', 'average'], {'acc': aacc.item(), 'mF1': af1.item()})
+            logs.append(['performance', 'best'], {'acc': bestacc.item(), 'mF1': bestmf1.item()})
+            logs.append(['performance', 'BWT'], {'acc': bwt.item(), 'mF1': bwtf1.item()})
+            logs.append(['performance', 'FWT'], {'acc': fwt.item(), 'mF1': fwtf1.item()})
     sys.stdout = original_stdout
 
 

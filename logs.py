@@ -31,8 +31,7 @@ class LogDocument:
     def update_test_results(self, test_results, fold_idx):
         cnt = 0
         for task_accs, task_mF1s in test_results:
-            self.append(['performance', f'acc_on_task{cnt}_fold{fold_idx}'], task_accs)
-            self.append(['performance', f'mF1_on_task{cnt}_fold{fold_idx}'], task_mF1s)
+            self.append(['performance', f'task{cnt}_fold{fold_idx}'], {'acc': task_accs, 'mF1': task_mF1s})
             cnt += 1
 
     def write(self):
