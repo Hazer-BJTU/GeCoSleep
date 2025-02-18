@@ -51,14 +51,15 @@ class CLnetwork:
         self.confusion_matrix.count_task_separated(y_hat, y, 0)
 
     def end_epoch(self, valid_dataset):
+        learning_rate = self.optimizer.state_dict()['param_groups'][0]['lr']
         train_acc, train_mf1 = self.confusion_matrix.accuracy(), self.confusion_matrix.macro_f1()
         print(f'epoch: {self.epoch}, train loss: {self.train_loss / self.cnt:.3f}, train accuracy: {train_acc:.3f}, '
-              f"macro F1: {train_mf1:.3f}, 1000 lr: {self.optimizer.state_dict()['param_groups'][0]['lr'] * 1000:.3f}")
+              f"macro F1: {train_mf1:.3f}, 1000 lr: {learning_rate * 1000:.3f}")
         self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch}'], {
             'train loss': self.train_loss / self.cnt,
             'train accuracy': train_acc,
             'train mF1': train_mf1,
-            '1000 lr': self.optimizer.state_dict()['param_groups'][0]['lr'] * 1000
+            '1000 lr': learning_rate * 1000
         })
         if (self.epoch + 1) % self.args.valid_epoch == 0:
             print(f'validating on the datasets...')

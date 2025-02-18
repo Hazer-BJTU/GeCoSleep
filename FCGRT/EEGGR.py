@@ -152,6 +152,13 @@ class EEGGRnetwork(CLnetwork):
                   f'task loss: {self.task_loss / self.cnt:.3f}, '
                   f'kl loss: {self.kl_loss / self.cnt:.3f}, '
                   f"1000 lr: {lr_seq_gen * 1000:.3f}")
+            self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch}'], {
+                'train generator': True,
+                'reconstruction loss': self.rec_loss / self.cnt,
+                'task loss': self.task_loss / self.cnt,
+                'kl loss': self.kl_loss / self.cnt,
+                '1000 lr': lr_seq_gen * 1000
+            })
             '''
             if self.task > 0:
                 weights = self.running_task_loss.softmax(dim=0)
