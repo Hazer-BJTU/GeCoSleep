@@ -29,6 +29,8 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
         clnetwork = FineTuning(args, fold_idx, logs)
     elif args.replay_mode == 'independent':
         clnetwork = Independent(args, fold_idx, logs)
+    elif args.replay_mode == 'experience':
+        clnetwork = ExperienceReplay(args, fold_idx, logs)
     confusion = ConfusionMatrix(args.task_num)
     print('start first testing...')
     confusion = evaluate_tasks(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)

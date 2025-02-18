@@ -174,6 +174,15 @@ class ExperienceReplay(CLnetwork):
         self.cnt += 1
         self.confusion_matrix.count_task_separated(y_hat, y, 0)
 
+    def end_epoch(self, valid_dataset):
+        super(ExperienceReplay, self).end_epoch(valid_dataset)
+        if self.sample_buffer is None:
+            replay_buffer_size = 0
+        else:
+            replay_buffer_size = self.sample_buffer.shape[0]
+        self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch}',
+                          'replay buffer size'], replay_buffer_size)
+
     def end_task(self):
         super(ExperienceReplay, self).end_task()
         self.replay_memory.append((self.sample_buffer, self.label_buffer))
