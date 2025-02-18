@@ -76,7 +76,7 @@ class CLnetwork:
                 self.best_train_loss = self.train_loss / self.cnt
                 self.best_train_acc = train_acc
                 self.best_valid_acc = valid_acc + valid_mf1
-                self.best_net = './modelsaved/' + str(self.args.replay_mode) + '_task' + str(self.task) + '_fold' + str(self.flod_num) + '.pth'
+                self.best_net = './modelsaved/' + str(self.args.replay_mode) + '_task' + str(self.task) + '_fold' + str(self.fold_num) + '.pth'
                 print(f'model saved: {self.best_net}')
                 torch.save(self.net.state_dict(), self.best_net)
         self.epoch += 1
