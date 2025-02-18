@@ -254,26 +254,30 @@ def load_all_datasets(args):
     datas, labels = [], []
     for task_name in args.task_names:
         if task_name == 'ISRUC1':
-            normalize = args.normalize if task_name == args.task_names[0] else True
-            task_data, task_label = load_data_isruc1(args.isruc1_path, args.window_size, args.isruc1,
+            normalize = args.normalize
+            file_path = os.path.join(args.path_prefix, args.isruc1_path)
+            task_data, task_label = load_data_isruc1(file_path, args.window_size, args.isruc1,
                                                      args.total_num['ISRUC1'], normalize)
             datas.append(task_data)
             labels.append(task_label)
         elif task_name == 'SHHS':
-            normalize = args.normalize if task_name == args.task_names[0] else True
-            task_data, task_label = load_data_shhs(args.shhs_path, args.window_size, args.shhs,
+            normalize = args.normalize
+            file_path = os.path.join(args.path_prefix, args.shhs_path)
+            task_data, task_label = load_data_shhs(file_path, args.window_size, args.shhs,
                                                    args.total_num['SHHS'], normalize)
             datas.append(task_data)
             labels.append(task_label)
         elif task_name == 'MASS':
-            normalize = args.normalize if task_name == args.task_names[0] else True
-            task_data, task_label = load_data_mass(args.mass_path, args.window_size, args.mass,
+            normalize = args.normalize
+            file_path = os.path.join(args.path_prefix, args.mass_path)
+            task_data, task_label = load_data_mass(file_path, args.window_size, args.mass,
                                                    args.total_num['MASS'], normalize)
             datas.append(task_data)
             labels.append(task_label)
         elif task_name == 'Sleep-EDF':
-            normalize = args.normalize if task_name == args.task_names[0] else True
-            task_data, task_label = load_data_sleepedf(args.sleep_edf_path, args.window_size, args.sleep_edf,
+            normalize = args.normalize
+            file_path = os.path.join(args.path_prefix, args.sleep_edf_path)
+            task_data, task_label = load_data_sleepedf(file_path, args.window_size, args.sleep_edf,
                                                        args.total_num['Sleep-EDF'], normalize)
             datas.append(task_data)
             labels.append(task_label)

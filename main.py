@@ -1,19 +1,20 @@
-from train import *
 import argparse
+from train import *
 
 parser = argparse.ArgumentParser(description='experiment settings')
+parser.add_argument('--path_prefix', type=str, nargs='?', default='/root/autodl-tmp', help='path to datasets')
 parser.add_argument('--random_seed', type=int, nargs='?', default=42, help='random seed')
 parser.add_argument('--isruc1_path', type=str, nargs='?',
-                    default='/home/ShareData/ISRUC-1/ISRUC-1', help='file path of isruc1 dataset')
+                    default='ISRUC-1', help='file path of isruc1 dataset')
 parser.add_argument('--isruc1', nargs='+', default=['C4_A1', 'LOC_A2'], help='channels for isruc1')
 parser.add_argument('--shhs_path', type=str, nargs='?',
-                    default='/home/ShareData/shhs1_process6', help='file path of shhs dataset')
+                    default='shhs1_process6', help='file path of shhs dataset')
 parser.add_argument('--shhs', nargs='+', default=['EEG', 'EOG(L)'], help='channels for shhs')
 parser.add_argument('--mass_path', type=str, nargs='?',
-                    default='/home/ShareData/MASS_SS3_3000_25C-Cz', help='file path of mass dataset')
+                    default='MASS_SS3_3000_25C-Cz', help='file path of mass dataset')
 parser.add_argument('--mass', nargs='+', default=['C4', 'EogL'], help='channels for mass')
 parser.add_argument('--sleep_edf_path', type=str, nargs='?',
-                    default='/home/ShareData/sleep-edf-153-3chs', help='file path of sleepedf dataset')
+                    default='sleep-edf-153-3chs', help='file path of sleepedf dataset')
 parser.add_argument('--sleep_edf', nargs='+', default=['Fpz-Cz', 'EOG'], help='channels of sleepedf')
 parser.add_argument('--normalize', type=bool, nargs='?', default=True, help='whether normalize samples in subjects')
 parser.add_argument('--task_num', type=int, nargs='?', default=4, help='number of tasks')
@@ -33,15 +34,17 @@ parser.add_argument('--weight_decay', type=float, nargs='?', default=1e-5, help=
 parser.add_argument('--lr', type=float, nargs='?', default=1e-4, help='learning rate')
 parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='continual learning strategy')
 parser.add_argument('--min_epoch', type=float, nargs='?', default=15, help='min epochs for model saving')
-parser.add_argument('--temp_out', type=str, nargs='?', default='temp_out.txt', help='temporary output path')
 '''generative replay settings'''
 parser.add_argument('--num_epochs_generator', type=int, nargs='?', default=100, help='number of epochs for generator')
 parser.add_argument('--lr_seq_gen', type=float, nargs='?', default=1e-4, help='learning rate for sequential generator')
 parser.add_argument('--alpha', type=float, nargs='?', default=1, help='coefficient of task loss')
 parser.add_argument('--beta', type=float, nargs='?', default=0.1, help='coefficient of kl loss')
 parser.add_argument('--gamma', type=float, nargs='?', default=1e-2, help='updating rate for running loss')
+'''other settings'''
+parser.add_argument('--replay_buffer', type=float, nargs='?', default=128, help='replay buffer size for each task')
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    R = train_k_fold(args)
-    write_format(R, args, 'cl_output_record_' + args.replay_mode + '.txt')
+    R, exp_log = train_k_fold(args)
+    write_format(R, args, 'cl_output_record_' + args.replay_mode + '.txt', exp_log)
+    exp_log.write()

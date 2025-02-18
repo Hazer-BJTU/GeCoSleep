@@ -4,6 +4,7 @@ import numpy as np
 from clnetworks import *
 from FCGRT.EEGGR import *
 from data_preprocessing import *
+from logs import *
 
 
 def set_random_seed(seed):
@@ -81,6 +82,7 @@ def allocate_fold(args):
 
 
 def train_k_fold(args):
+    exp_log = LogDocument(args)
     set_random_seed(args.random_seed)
     fold_task_test_idx, fold_task_valid_idx, fold_task_train_idx = allocate_fold(args)
     datas, labels = load_all_datasets(args)
@@ -89,19 +91,15 @@ def train_k_fold(args):
         trains, valids, tests = create_fold_task_separated(fold_task_train_idx[fold_idx], fold_task_valid_idx[fold_idx], fold_task_test_idx[fold_idx], datas, labels)
         print(f'start fold {fold_idx}:')
         test_results = train_cl(args, trains, valids, tests, fold_idx)
-        saved_stdout = sys.stdout
-        with open(args.temp_out, 'a+') as file:
-            sys.stdout = file
-            print(test_results)
-        sys.stdout = saved_stdout
+        exp_log.update_test_results(test_results, fold_idx)
         for i in range(args.task_num + 1):
             for j in range(args.task_num):
                 total_results[i][j][0] += test_results[i][0][j] / len(fold_task_test_idx)
                 total_results[i][j][1] += test_results[i][1][j] / len(fold_task_test_idx)
-    return total_results
+    return total_results, exp_log
 
 
-def write_format(R, args, filepath='cl_output_record.txt'):
+def write_format(R, args, filepath='cl_output_record.txt', logs=None):
     original_stdout = sys.stdout
     with open(filepath, 'w') as file:
         sys.stdout = file
@@ -119,9 +117,12 @@ def write_format(R, args, filepath='cl_output_record.txt'):
                 avg_f1 += R[i][j][1] / args.task_num
             print(f' {avg_acc:.3f} / {avg_f1:.3f} |')
         print('-' * (16 * args.task_num + 24))
+        bestacc, bestmf1 = 0, 0
         aacc, bwt, fwt = 0, 0, 0
         af1, bwtf1, fwtf1 = 0, 0, 0
         for j in range(args.task_num):
+            bestacc += R[j + 1][j][0]
+            bestmf1 += R[j + 1][j][1]
             aacc += R[args.task_num][j][0]
             af1 += R[args.task_num][j][1]
             if j != args.task_num - 1:
@@ -130,11 +131,22 @@ def write_format(R, args, filepath='cl_output_record.txt'):
             if j != 0:
                 fwt += R[j][j][0] - R[0][j][0]
                 fwtf1 += R[j][j][1] - R[0][j][1]
+        bestacc, bestmf1 = bestacc / args.task_num, bestmf1 / args.task_num
         aacc, bwt, fwt = aacc / args.task_num, bwt / (args.task_num - 1), fwt / (args.task_num - 1)
         af1, bwtf1, fwtf1 = af1 / args.task_num, bwtf1 / (args.task_num - 1), fwtf1 / (args.task_num - 1)
         print(f'average acc: {aacc:.3f}, average macro F1: {af1:.3f}')
+        print(f'best acc: {bestacc:.3f}, best macro F1: {bestmf1:.3f}')
         print(f'BWT: {bwt:.3f}, BWT(mF1): {bwtf1:.3f}')
         print(f'FWT: {fwt:.3f}, FWT(mF1): {fwtf1:.3f}')
+        if logs is not None:
+            logs.append(['performance', 'average', 'acc'], aacc)
+            logs.append(['performance', 'average', 'mF1'], af1)
+            logs.append(['performance', 'best', 'acc'], bestacc)
+            logs.append(['performance', 'best', 'mF1'], bestmf1)
+            logs.append(['performance', 'BWT', 'acc'], bwt)
+            logs.append(['performance', 'BWT', 'mF1'], bwtf1)
+            logs.append(['performance', 'FWT', 'acc'], fwt)
+            logs.append(['performance', 'FWT', 'mF1'], fwtf1)
     sys.stdout = original_stdout
 
 
