@@ -101,7 +101,7 @@ def train_k_fold(args):
 
 def write_format(R, args, filepath='cl_output_record.txt', logs=None):
     original_stdout = sys.stdout
-    with open(filepath, 'w') as file:
+    with open(os.path.join('results', filepath), 'w') as file:
         sys.stdout = file
         print('tasks: ', end='')
         for i in range(args.task_num):

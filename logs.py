@@ -1,5 +1,6 @@
 import random
 import json
+import os
 from main import args
 from datetime import datetime
 
@@ -35,7 +36,7 @@ class LogDocument:
             cnt += 1
 
     def write(self):
-        with open(self.file_path, 'w', encoding='utf-8') as file:
+        with open(os.path.join('results', self.file_path), 'w', encoding='utf-8') as file:
             json.dump(self.all_information, file, indent=4)
 
 
