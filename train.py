@@ -92,6 +92,7 @@ def train_k_fold(args):
         print(f'start fold {fold_idx}:')
         test_results = train_cl(args, trains, valids, tests, fold_idx)
         exp_log.update_test_results(test_results, fold_idx)
+        exp_log.write()
         for i in range(args.task_num + 1):
             for j in range(args.task_num):
                 total_results[i][j][0] += test_results[i][0][j] / len(fold_task_test_idx)
@@ -139,14 +140,14 @@ def write_format(R, args, filepath='cl_output_record.txt', logs=None):
         print(f'BWT: {bwt:.3f}, BWT(mF1): {bwtf1:.3f}')
         print(f'FWT: {fwt:.3f}, FWT(mF1): {fwtf1:.3f}')
         if logs is not None:
-            logs.append(['performance', 'average', 'acc'], aacc)
-            logs.append(['performance', 'average', 'mF1'], af1)
-            logs.append(['performance', 'best', 'acc'], bestacc)
-            logs.append(['performance', 'best', 'mF1'], bestmf1)
-            logs.append(['performance', 'BWT', 'acc'], bwt)
-            logs.append(['performance', 'BWT', 'mF1'], bwtf1)
-            logs.append(['performance', 'FWT', 'acc'], fwt)
-            logs.append(['performance', 'FWT', 'mF1'], fwtf1)
+            logs.append(['performance', 'average', 'acc'], aacc.item())
+            logs.append(['performance', 'average', 'mF1'], af1.item())
+            logs.append(['performance', 'best', 'acc'], bestacc.item())
+            logs.append(['performance', 'best', 'mF1'], bestmf1.item())
+            logs.append(['performance', 'BWT', 'acc'], bwt.item())
+            logs.append(['performance', 'BWT', 'mF1'], bwtf1.item())
+            logs.append(['performance', 'FWT', 'acc'], fwt.item())
+            logs.append(['performance', 'FWT', 'mF1'], fwtf1.item())
     sys.stdout = original_stdout
 
 

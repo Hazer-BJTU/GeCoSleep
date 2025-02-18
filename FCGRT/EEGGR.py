@@ -5,8 +5,8 @@ from clnetworks import CLnetwork
 
 
 class EEGGRnetwork(CLnetwork):
-    def __init__(self, args, fold_num):
-        super(EEGGRnetwork, self).__init__(args, fold_num)
+    def __init__(self, **kwargs):
+        super(EEGGRnetwork, self).__init__(**kwargs)
         '''generator settings'''
         self.start_training_generator = False
         self.num_epochs_solver = self.args.num_epochs - self.args.num_epochs_generator
