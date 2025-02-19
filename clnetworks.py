@@ -1,3 +1,4 @@
+import random
 from models import *
 from metric import *
 
@@ -120,15 +121,13 @@ class Independent(CLnetwork):
 class ExperienceReplay(CLnetwork):
     def __init__(self, args, fold_num, logs):
         super(ExperienceReplay, self).__init__(args, fold_num, logs)
-        self.replay_buffer = self.args.replay_buffer
+        self.replay_buffer = 0
         self.sample_buffer = None
         self.label_buffer = None
-        self.replay_memory = []
 
     def start_task(self):
         super(ExperienceReplay, self).start_task()
-        self.sample_buffer = None
-        self.label_buffer = None
+        self.replay_buffer += self.args.replay_buffer
 
     def update_buffer(self, X, y):
         if self.sample_buffer is None or self.label_buffer is None:
@@ -160,17 +159,12 @@ class ExperienceReplay(CLnetwork):
         L_current = self.loss(y_hat, y.view(-1))
         L = torch.mean(L_current)
         if self.task > 0:
-            total_number = 0
-            for Xr, yr in self.replay_memory:
-                total_number += Xr.shape[0]
-            '''
-            print(f"perform experience replay on {len(self.replay_memory)} tasks and {total_number} samples...")
-            '''
-            for Xr, yr in self.replay_memory:
-                Xr, yr = Xr.to(self.device), yr.to(self.device)
-                yr_hat = self.net(Xr)
-                L_replay = self.loss(yr_hat, yr.view(-1))
-                L = L + torch.mean(L_replay)
+            selected = random.sample(list(range(self.sample_buffer.shape[0])), self.args.batch_size)
+            Xr, yr = self.sample_buffer[selected], self.label_buffer[selected]
+            Xr, yr = Xr.to(self.device), yr.to(self.device)
+            yr_hat = self.net(Xr)
+            L_replay = self.loss(yr_hat, yr.view(-1))
+            L = L + torch.mean(L_replay)
         L.backward()
         self.optimizer.step()
         self.train_loss += L.item()
@@ -179,15 +173,8 @@ class ExperienceReplay(CLnetwork):
 
     def end_epoch(self, valid_dataset):
         super(ExperienceReplay, self).end_epoch(valid_dataset)
-        total_number = 0
-        for Xr, yr in self.replay_memory:
-            total_number += Xr.shape[0]
         self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch - 1}',
-                          'replay samples'], total_number)
-
-    def end_task(self):
-        super(ExperienceReplay, self).end_task()
-        self.replay_memory.append((self.sample_buffer, self.label_buffer))
+                          'replay buffer size'], self.sample_buffer.shape[0])
 
 
 if __name__ == '__main__':
