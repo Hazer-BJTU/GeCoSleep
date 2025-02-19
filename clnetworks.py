@@ -154,20 +154,23 @@ class ExperienceReplay(CLnetwork):
             self.update_buffer(X, y)
         X, y = X.to(self.device), y.to(self.device)
         self.optimizer.zero_grad()
+        if self.task > 0:
+            self.net.freeze_parameters()
         y_hat = self.net(X)
         L_current = self.loss(y_hat, y.view(-1))
         L = torch.mean(L_current)
         if self.task > 0:
-            self.net.freeze_parameters()
             total_number = 0
             for Xr, yr in self.replay_memory:
                 total_number += Xr.shape[0]
-            print(f'perform experience replay on {len(self.replay_memory)} tasks and {total_number} samples...')
+            '''
+            print(f"perform experience replay on {len(self.replay_memory)} tasks and {total_number} samples...")
+            '''
             for Xr, yr in self.replay_memory:
                 Xr, yr = Xr.to(self.device), yr.to(self.device)
                 yr_hat = self.net(Xr)
                 L_replay = self.loss(yr_hat, yr.view(-1))
-                L = L + torch.mean(L_replay) / len(self.replay_memory)
+                L = L + torch.mean(L_replay)
         L.backward()
         self.optimizer.step()
         self.train_loss += L.item()
@@ -176,12 +179,11 @@ class ExperienceReplay(CLnetwork):
 
     def end_epoch(self, valid_dataset):
         super(ExperienceReplay, self).end_epoch(valid_dataset)
-        if self.sample_buffer is None:
-            replay_buffer_size = 0
-        else:
-            replay_buffer_size = self.sample_buffer.shape[0]
-        self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch}',
-                          'replay buffer size'], replay_buffer_size)
+        total_number = 0
+        for Xr, yr in self.replay_memory:
+            total_number += Xr.shape[0]
+        self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch - 1}',
+                          'replay samples'], total_number)
 
     def end_task(self):
         super(ExperienceReplay, self).end_task()
