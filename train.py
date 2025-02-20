@@ -3,6 +3,8 @@ import random
 import numpy as np
 from clnetworks import *
 from FCGRT.EEGGR import *
+from baselines.LwF import *
+from baselines.LwFmodel import *
 from data_preprocessing import *
 from logs import *
 
@@ -31,9 +33,16 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
         clnetwork = Independent(args, fold_idx, logs)
     elif args.replay_mode == 'experience':
         clnetwork = ExperienceReplay(args, fold_idx, logs)
+    elif args.replay_mode == 'lwf':
+        clnetwork = LwFnetwork(args, fold_idx, logs)
     confusion = ConfusionMatrix(args.task_num)
     print('start first testing...')
-    confusion = evaluate_tasks(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
+    if args.replay_mode == 'packnet':
+        confusion = evaluate_tasks_packnet(clnetwork.net, tests, confusion, clnetwork.device, clnetwork, args.valid_batch)
+    elif args.replay_mode == 'lwf':
+        confusion = evaluate_tasks_lwf(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
+    else:
+        confusion = evaluate_tasks(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
     test_results.append((confusion.accuracy(), confusion.macro_f1()))
     for task_idx in range(args.task_num):
         print(f'start task {task_idx}:')
@@ -51,11 +60,17 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
         clnetwork.end_task()
         confusion.clear()
         print(f'start testing...')
-        bestnet = SleepNet(2, args.dropout)
-        bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
         if args.replay_mode == 'packnet':
+            bestnet = SleepNet(len(args.isruc1), args.dropout)
+            bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
             confusion = evaluate_tasks_packnet(bestnet, tests, confusion, clnetwork.device, clnetwork, args.valid_batch)
+        elif args.replay_mode == 'lwf':
+            bestnet = LwFSleepNet(len(args.isruc1), args.dropout, args.task_num)
+            bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
+            confusion = evaluate_tasks_lwf(bestnet, tests, confusion, clnetwork.device, args.valid_batch)
         else:
+            bestnet = SleepNet(len(args.isruc1), args.dropout)
+            bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
             confusion = evaluate_tasks(bestnet, tests, confusion, clnetwork.device, args.valid_batch)
         test_results.append((confusion.accuracy(), confusion.macro_f1()))
     return test_results
@@ -90,7 +105,13 @@ def train_k_fold(args):
     datas, labels = load_all_datasets(args)
     total_results = torch.zeros((args.task_num + 1, args.task_num, 2), dtype=torch.float32, requires_grad=False)
     for fold_idx in range(len(fold_task_test_idx)):
-        trains, valids, tests = create_fold_task_separated(fold_task_train_idx[fold_idx], fold_task_valid_idx[fold_idx], fold_task_test_idx[fold_idx], datas, labels)
+        trains, valids, tests = create_fold_task_separated(
+            fold_task_train_idx[fold_idx],
+            fold_task_valid_idx[fold_idx],
+            fold_task_test_idx[fold_idx],
+            datas,
+            labels
+        )
         print(f'start fold {fold_idx}:')
         test_results = train_cl(args, trains, valids, tests, fold_idx, exp_log)
         exp_log.update_test_results(test_results, fold_idx)

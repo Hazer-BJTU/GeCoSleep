@@ -82,10 +82,10 @@ class EEGGRnetwork(CLnetwork):
                 weights = self.running_task_loss.softmax(dim=0)
                 t = torch.multinomial(weights, y.shape[0], replacement=True)
                 F_fake = self.teacher_seq_gen.decoder.generate(y, t).detach()
-                y_fake = self.teacher_model.classify(F_fake).detach()
+                y_fake = self.teacher_model.classify(F_fake).detach() / self.args.tau
                 y_pred = self.net.classify(F_fake)
-                L_replay = torch.sum(self.kldloss(nn.functional.log_softmax(y_pred, dim=1), y_fake.softmax(dim=1)), dim=1)
-                L = L + torch.mean(L_replay)
+                L_replay = torch.sum(self.kldloss(nn.functional.log_softmax(y_pred / self.args.tau, dim=1), y_fake.softmax(dim=1)), dim=1)
+                L = L + torch.mean(L_replay) * (self.args.tau ** 2)
                 '''update running task loss'''
                 self.update_running_task_loss(L_replay, t, y.shape[0])
             L.backward()
@@ -122,15 +122,15 @@ class EEGGRnetwork(CLnetwork):
                 t_prime = torch.ones(y.shape[0], dtype=torch.int64, requires_grad=False, device=self.device) * self.task
             F_hat, L_kl = self.seq_gen(F_prime, y_prime, t_prime)
             L_rec = self.mseloss(F_hat, F_prime)
-            pred_true = self.net.classify(F_prime).detach()
+            pred_true = self.net.classify(F_prime).detach() / self.args.tau
             pred_fake = self.net.classify(F_hat)
-            L_task = torch.sum(self.kldloss(nn.functional.log_softmax(pred_fake, dim=1), pred_true.softmax(dim=1)), dim=1)
+            L_task = torch.sum(self.kldloss(nn.functional.log_softmax(pred_fake / self.args.tau, dim=1), pred_true.softmax(dim=1)), dim=1)
             if self.task > 0:
                 '''update running task loss'''
                 self.update_running_task_loss(L_task.detach(), t_prime, y.shape[0])
             '''backprop'''
             L_task = torch.mean(L_task)
-            (L_rec + self.args.alpha * L_task + self.args.beta * L_kl).backward()
+            (L_rec + (self.args.tau ** 2) * L_task + self.args.beta * L_kl).backward()
             self.optim_seq_gen.step()
             self.rec_loss += L_rec.item()
             self.task_loss += L_task.item()

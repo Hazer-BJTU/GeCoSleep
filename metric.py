@@ -85,6 +85,22 @@ def evaluate_tasks(net, datasets, confusion_matrix, device, batch_size=1):
     return confusion_matrix
 
 
+def evaluate_tasks_lwf(net, datasets, confusion_matrix, device, batch_size=1, task_idx=None):
+    net.to(device)
+    net.eval()
+    with torch.no_grad():
+        for idx in range(len(datasets)):
+            loader = DataLoader(datasets[idx], batch_size=batch_size, shuffle=False)
+            for X, y in loader:
+                X, y = X.to(device), y.to(device)
+                if task_idx is None:
+                    y_hat = net(X, idx)
+                else:
+                    y_hat = net(X, task_idx)
+                confusion_matrix.count_task_separated(y_hat, y, idx)
+    return confusion_matrix
+
+
 def evaluate_tasks_packnet(net, datasets, confusion_matrix, device, clnetwork, batch_size=1):
     using_list = clnetwork.using_list
     grad_positions = clnetwork.grad_positions
