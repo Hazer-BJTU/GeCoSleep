@@ -1,3 +1,4 @@
+import numpy
 import torch.nn
 from models import *
 from . import generator
@@ -166,6 +167,11 @@ class EEGGRnetwork(CLnetwork):
             '''
             self.epoch += 1
             self.sched_seq_gen.step()
+        if self.task > 0:
+            self.logs.append(
+                ['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch - 1}', 'Pk'],
+                self.running_task_loss.cpu().numpy().tolist()
+            )
 
     def end_task(self):
         super(EEGGRnetwork, self).end_task()
