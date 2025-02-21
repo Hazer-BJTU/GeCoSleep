@@ -1,6 +1,19 @@
+import math
 import random
+
+import torch.optim.lr_scheduler
+
 from models import *
 from metric import *
+
+
+def linear_warmup_cosine_annealing(total_epochs, warmup=10):
+    def linear_warmup_cosine_annealing_inner(epoch):
+        if epoch < warmup:
+            return (epoch + 1) / warmup
+        else:
+            return 0.5 * (1 + math.cos(math.pi * (epoch - warmup) / (total_epochs - warmup)))
+    return linear_warmup_cosine_annealing_inner
 
 
 class CLnetwork:
@@ -32,7 +45,9 @@ class CLnetwork:
         self.label_cnt = torch.zeros(5, dtype=torch.float32, device=self.device, requires_grad=False)
         self.best_train_loss, self.best_train_acc, self.best_valid_acc = 0.0, 0.0, 0.0
         self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, max(self.args.num_epochs // 6, 1), 0.6)
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(
+            self.optimizer, lr_lambda=linear_warmup_cosine_annealing(self.args.num_epochs)
+        )
 
     def start_epoch(self):
         self.train_loss, self.cnt = 0.0, 0
@@ -115,7 +130,10 @@ class Independent(CLnetwork):
         self.label_cnt = torch.zeros(5, dtype=torch.float32, device=self.device, requires_grad=False)
         self.best_train_loss, self.best_train_acc, self.best_valid_acc = 0.0, 0.0, 0.0
         self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, max(self.args.num_epochs // 6, 1), 0.6)
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(
+            self.optimizer,
+            lr_lambda=linear_warmup_cosine_annealing(self.args.num_epochs)
+        )
 
 
 class ExperienceReplay(CLnetwork):

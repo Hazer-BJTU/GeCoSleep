@@ -2,7 +2,7 @@ import numpy
 import torch.nn
 from models import *
 from . import generator
-from clnetworks import CLnetwork
+from clnetworks import CLnetwork, linear_warmup_cosine_annealing
 
 
 class EEGGRnetwork(CLnetwork):
@@ -32,9 +32,16 @@ class EEGGRnetwork(CLnetwork):
         super(EEGGRnetwork, self).start_task()
         '''generator settings'''
         self.start_training_generator = False
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, max(self.num_epochs_solver // 6, 1), 0.6)
+        self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(
+            self.optimizer,
+            lr_lambda=linear_warmup_cosine_annealing(self.num_epochs_solver)
+        )
         self.optim_seq_gen = torch.optim.Adam(self.seq_gen.parameters(), lr=self.args.lr_seq_gen)
-        self.sched_seq_gen = torch.optim.lr_scheduler.StepLR(self.optim_seq_gen, max(self.args.num_epochs_generator // 6, 1), 0.6)
+        self.sched_seq_gen = torch.optim.lr_scheduler.LambdaLR(
+            self.optim_seq_gen,
+            lr_lambda=linear_warmup_cosine_annealing(self.args.num_epochs_generator)
+        )
         '''replay settings'''
         if self.task > 0:
             self.teacher_model.load_state_dict(torch.load(self.best_net_memory[-1], map_location=self.device, weights_only=True))
@@ -71,9 +78,6 @@ class EEGGRnetwork(CLnetwork):
     def observe(self, X, y, first_time=False):
         if self.epoch < self.num_epochs_solver:
             X, y = X.to(self.device), y.to(self.device)
-            if self.task > 0:
-                '''freeze feature extractor'''
-                self.net.freeze_parameters()
             self.optimizer.zero_grad()
             y_hat = self.net(X)
             L_current = self.loss(y_hat, y.view(-1))
@@ -87,6 +91,11 @@ class EEGGRnetwork(CLnetwork):
                 y_pred = self.net.classify(F_fake)
                 L_replay = torch.sum(self.kldloss(nn.functional.log_softmax(y_pred / self.args.tau, dim=1), y_fake.softmax(dim=1)), dim=1)
                 L = L + torch.mean(L_replay) * (self.args.tau ** 2)
+                '''distillation for sample feature extractor'''
+                F_distill = self.teacher_model.features(X)
+                F_pred = self.net.features(X)
+                L_distill = self.mseloss(F_pred, F_distill)
+                L = L + L_distill * self.args.alpha
                 '''update running task loss'''
                 self.update_running_task_loss(L_replay, t, y.shape[0])
             L.backward()
@@ -95,6 +104,9 @@ class EEGGRnetwork(CLnetwork):
             self.confusion_matrix.count_task_separated(y_hat, y, 0)
         else:
             if not self.start_training_generator:
+                if self.task + 1 == self.args.task_num:
+                    print('skip last training...')
+                    return
                 print('start training generator...')
                 self.net.load_state_dict(torch.load(self.best_net, map_location=self.device, weights_only=True))
                 print(f'best solver model loaded: {self.best_net}')
@@ -147,6 +159,8 @@ class EEGGRnetwork(CLnetwork):
                 print(f'task replay distribution: {torch.round(weights, decimals=2).data}')
             '''
         else:
+            if self.task + 1 == self.args.task_num:
+                return
             lr_seq_gen = self.optim_seq_gen.state_dict()['param_groups'][0]['lr']
             print(f'epoch: {self.epoch}, '
                   f'reconstruction loss: {self.rec_loss / self.cnt:.3f}, '
