@@ -92,7 +92,7 @@ class EEGGRnetwork(CLnetwork):
                 L_replay = torch.sum(self.kldloss(nn.functional.log_softmax(y_pred / self.args.tau, dim=1), y_fake.softmax(dim=1)), dim=1)
                 L = L + torch.mean(L_replay)
                 '''distillation for sample feature extractor'''
-                y_distill = self.teacher_model(X).detach()
+                y_distill = self.teacher_model(X).detach() / self.args.tau
                 L_distill = torch.sum(self.kldloss(nn.functional.log_softmax(y_hat / self.args.tau, dim=1), y_distill.softmax(dim=1)), dim=1)
                 L = L + torch.mean(L_distill)
                 '''update running task loss'''
