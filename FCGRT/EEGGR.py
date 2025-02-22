@@ -90,12 +90,11 @@ class EEGGRnetwork(CLnetwork):
                 y_fake = self.teacher_model.classify(F_fake).detach() / self.args.tau
                 y_pred = self.net.classify(F_fake)
                 L_replay = torch.sum(self.kldloss(nn.functional.log_softmax(y_pred / self.args.tau, dim=1), y_fake.softmax(dim=1)), dim=1)
-                L = L + torch.mean(L_replay) * (self.args.tau ** 2)
+                L = L + torch.mean(L_replay)
                 '''distillation for sample feature extractor'''
-                F_distill = self.teacher_model.features(X)
-                F_pred = self.net.features(X)
-                L_distill = self.mseloss(F_pred, F_distill)
-                L = L + L_distill * self.args.alpha
+                y_distill = self.teacher_model(X).detach()
+                L_distill = torch.sum(self.kldloss(nn.functional.log_softmax(y_hat / self.args.tau, dim=1), y_distill.softmax(dim=1)), dim=1)
+                L = L + torch.mean(L_distill)
                 '''update running task loss'''
                 self.update_running_task_loss(L_replay, t, y.shape[0])
             L.backward()
@@ -143,7 +142,7 @@ class EEGGRnetwork(CLnetwork):
                 self.update_running_task_loss(L_task.detach(), t_prime, y.shape[0])
             '''backprop'''
             L_task = torch.mean(L_task)
-            (L_rec + (self.args.tau ** 2) * L_task + self.args.beta * L_kl).backward()
+            (L_rec + L_task + self.args.beta * L_kl).backward()
             self.optim_seq_gen.step()
             self.rec_loss += L_rec.item()
             self.task_loss += L_task.item()
