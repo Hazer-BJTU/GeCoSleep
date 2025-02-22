@@ -78,6 +78,8 @@ class EEGGRnetwork(CLnetwork):
     def observe(self, X, y, first_time=False):
         if self.epoch < self.num_epochs_solver:
             X, y = X.to(self.device), y.to(self.device)
+            if self.task > 0:
+                self.net.freeze_parameters()
             self.optimizer.zero_grad()
             y_hat = self.net(X)
             L_current = self.loss(y_hat, y.view(-1))

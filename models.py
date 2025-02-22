@@ -127,7 +127,7 @@ class SleepNet(nn.Module):
             nn.Linear(768, 512)
         )
         self.classifier = nn.Sequential(
-            nn.Linear(1024, 512),
+            nn.LayerNorm(1024), nn.Linear(1024, 512),
             nn.LeakyReLU(0.1), nn.Dropout(dropout),
             nn.Linear(512, 5)
         )
@@ -164,8 +164,10 @@ class SleepNet(nn.Module):
                 m.eval()
         for name, param in self.cnn.named_parameters():
             param.requires_grad = False
+        '''
         for name, param in self.short_term_encoder.named_parameters():
             param.requires_grad = False
+        '''
 
 
 def init_weight(module):
