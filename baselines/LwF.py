@@ -39,7 +39,7 @@ class LwFnetwork(CLnetwork):
             '''perform knowledge distillation'''
             y_distill = self.teacher_model(X, self.task - 1).detach() / self.args.tau
             L_distill = torch.sum(self.kldloss(nn.functional.log_softmax(y_hat / self.args.tau, dim=1), y_distill.softmax(dim=1)), dim=1)
-            L = L + torch.mean(L_distill) * (self.args.tau ** 2)
+            L = L + torch.mean(L_distill)
         L.backward()
         self.optimizer.step()
         self.train_loss += L.item()
