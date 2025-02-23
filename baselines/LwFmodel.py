@@ -14,7 +14,8 @@ class LwFSleepNet(nn.Module):
         self.resblock = nn.Sequential(
             nn.Linear(512, 768),
             nn.LeakyReLU(0.1), nn.Dropout(dropout),
-            nn.Linear(768, 512)
+            nn.Linear(768, 512),
+            nn.LeakyReLU(0.1), nn.LayerNorm(512)
         )
         self.classifiers = nn.ModuleList()
         for idx in range(num_tasks):
