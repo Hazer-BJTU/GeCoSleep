@@ -4,10 +4,11 @@ from models import CNNencoders, ShortTermEncoder, LongTermEncoder
 
 
 class LwFSleepNet(nn.Module):
-    def __init__(self, input_channels, dropout, num_tasks, **kwargs):
+    def __init__(self, input_channels, dropout, num_tasks, enable_multihead, **kwargs):
         super(LwFSleepNet, self).__init__(**kwargs)
         self.input_channels = input_channels
         self.dropout = dropout
+        self.enable_multihead = enable_multihead
         self.cnn = CNNencoders(input_channels, dropout)
         self.short_term_encoder = ShortTermEncoder(128, 8, 4, dropout)
         self.long_term_encoder = LongTermEncoder(512, 8, 2, dropout)
@@ -18,15 +19,26 @@ class LwFSleepNet(nn.Module):
             nn.LeakyReLU(0.1), nn.LayerNorm(512)
         )
         self.classifiers = nn.ModuleList()
-        for idx in range(num_tasks):
-            classifier = nn.Sequential(
-                nn.Linear(1024, 512),
-                nn.LeakyReLU(0.1), nn.Dropout(dropout),
-                nn.Linear(512, 5)
+        if enable_multihead:
+            for idx in range(num_tasks):
+                classifier = nn.Sequential(
+                    nn.Linear(1024, 512),
+                    nn.LeakyReLU(0.1), nn.Dropout(dropout),
+                    nn.Linear(512, 5)
+                )
+                self.classifiers.append(classifier)
+        else:
+            self.classifiers.append(
+                nn.Sequential(
+                    nn.Linear(1024, 512),
+                    nn.LeakyReLU(0.1), nn.Dropout(dropout),
+                    nn.Linear(512, 5)
+                )
             )
-            self.classifiers.append(classifier)
 
     def forward(self, X, task_idx):
+        if not self.enable_multihead:
+            task_idx = 0
         batch_size, seq_length, num_channels, series = X.shape
         X = self.cnn(X)
         X = self.short_term_encoder(X)
@@ -45,6 +57,8 @@ class LwFSleepNet(nn.Module):
         return X
 
     def classify(self, X, task_idx):
+        if not self.enable_multihead:
+            task_idx = 0
         batch_size, seq_length, embeddings = X.shape
         r = self.resblock(X.view(batch_size * seq_length, -1))
         X = self.long_term_encoder(X)

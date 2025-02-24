@@ -40,6 +40,12 @@ parser.add_argument('--lr_seq_gen', type=float, nargs='?', default=1e-4, help='l
 parser.add_argument('--beta', type=float, nargs='?', default=0.1, help='coefficient of kl loss')
 parser.add_argument('--tau', type=float, nargs='?', default=5, help='temperature for knowledge distillation')
 parser.add_argument('--gamma', type=float, nargs='?', default=1e-2, help='updating rate for running loss')
+'''lwf settings'''
+parser.add_argument('--enable_multihead', type=bool, nargs='?', default=True, help='whether enable multihead')
+'''ewc settings'''
+parser.add_argument('--ewc_lambda', type=float, nargs='?', default=1e-4, help='coefficient for ewc penalty')
+parser.add_argument('--ewc_gamma', type=float, nargs='?', default=0.6, help='updating rate for FIM')
+parser.add_argument('--ewc_batches', type=int, nargs='?', default=10, help='number of batches for calculating FIM')
 '''other settings'''
 parser.add_argument('--replay_buffer', type=float, nargs='?', default=128, help='replay buffer size for each task')
 args = parser.parse_args()

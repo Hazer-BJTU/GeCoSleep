@@ -188,7 +188,7 @@ class EEGGRnetwork(CLnetwork):
                 self.running_task_loss.cpu().numpy().tolist()
             )
 
-    def end_task(self):
+    def end_task(self, dataset=None):
         super(EEGGRnetwork, self).end_task()
         seq_gen_path = './modelsaved/seq_gen_task' + str(self.task - 1) + '_fold' + str(self.fold_num) + '.pth'
         torch.save(self.seq_gen.state_dict(), seq_gen_path)

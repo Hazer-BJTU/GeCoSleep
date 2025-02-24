@@ -1,7 +1,6 @@
 import random
 import json
 import os
-from main import args
 from datetime import datetime
 
 
@@ -11,7 +10,7 @@ class LogDocument:
         self.file_path = (str(args.replay_mode) + f'_experiment{self.assignment_idx}_' +
                           datetime.now().strftime("%Y-%m-%d") + '.json')
         self.all_information = {
-            'log_startint_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'log_starting_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             'exp_assignment_index': self.assignment_idx,
             'exp_args': vars(args),
             'performance': {},
@@ -40,5 +39,8 @@ class LogDocument:
 
 
 if __name__ == '__main__':
+    '''
     log = LogDocument(args)
     log.write()
+    '''
+    pass

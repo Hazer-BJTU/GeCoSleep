@@ -99,7 +99,7 @@ class CLnetwork:
         self.epoch += 1
         self.scheduler.step()
 
-    def end_task(self):
+    def end_task(self, dataset=None):
         self.task += 1
         self.best_net_memory.append(self.best_net)
 
