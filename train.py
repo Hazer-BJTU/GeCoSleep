@@ -40,7 +40,7 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
     if args.replay_mode == 'packnet':
         confusion = evaluate_tasks_packnet(clnetwork.net, tests, confusion, clnetwork.device, clnetwork, args.valid_batch)
     elif args.replay_mode == 'lwf':
-        confusion = evaluate_tasks_lwf(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
+        confusion = evaluate_tasks_multihead(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
     else:
         confusion = evaluate_tasks(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
     test_results.append((confusion.accuracy(), confusion.macro_f1()))
@@ -67,7 +67,7 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
         elif args.replay_mode == 'lwf':
             bestnet = LwFSleepNet(len(args.isruc1), args.dropout, args.task_num)
             bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
-            confusion = evaluate_tasks_lwf(bestnet, tests, confusion, clnetwork.device, args.valid_batch)
+            confusion = evaluate_tasks_multihead(bestnet, tests, confusion, clnetwork.device, args.valid_batch)
         else:
             bestnet = SleepNet(len(args.isruc1), args.dropout)
             bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))

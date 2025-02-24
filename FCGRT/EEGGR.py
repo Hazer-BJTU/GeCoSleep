@@ -193,3 +193,7 @@ class EEGGRnetwork(CLnetwork):
         seq_gen_path = './modelsaved/seq_gen_task' + str(self.task - 1) + '_fold' + str(self.fold_num) + '.pth'
         torch.save(self.seq_gen.state_dict(), seq_gen_path)
         self.seq_gen_memory.append(seq_gen_path)
+
+
+if __name__ == '__main__':
+    pass

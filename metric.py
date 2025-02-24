@@ -85,7 +85,7 @@ def evaluate_tasks(net, datasets, confusion_matrix, device, batch_size=1):
     return confusion_matrix
 
 
-def evaluate_tasks_lwf(net, datasets, confusion_matrix, device, batch_size=1, task_idx=None):
+def evaluate_tasks_multihead(net, datasets, confusion_matrix, device, batch_size=1, task_idx=None):
     net.to(device)
     net.eval()
     with torch.no_grad():

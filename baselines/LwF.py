@@ -2,7 +2,7 @@ import torch.nn
 from models import *
 from . import LwFmodel
 from clnetworks import CLnetwork
-from metric import evaluate_tasks_lwf, ConfusionMatrix
+from metric import evaluate_tasks_multihead, ConfusionMatrix
 
 
 class LwFnetwork(CLnetwork):
@@ -60,8 +60,8 @@ class LwFnetwork(CLnetwork):
         if (self.epoch + 1) % self.args.valid_epoch == 0:
             print(f'validating on the datasets...')
             valid_confusion = ConfusionMatrix(1)
-            valid_confusion = evaluate_tasks_lwf(self.net, [valid_dataset], valid_confusion,
-                                                 self.device, self.args.valid_batch, self.task)
+            valid_confusion = evaluate_tasks_multihead(self.net, [valid_dataset], valid_confusion,
+                                                       self.device, self.args.valid_batch, self.task)
             valid_acc, valid_mf1 = valid_confusion.accuracy(), valid_confusion.macro_f1()
             print(f'valid accuracy: {valid_acc:.3f}, valid macro F1: {valid_mf1:.3f}')
             self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'valid epoch:{self.epoch}'], {
