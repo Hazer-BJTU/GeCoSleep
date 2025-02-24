@@ -1,6 +1,6 @@
 import torch.nn
 from models import *
-from . import LwFmodel
+from . import multihead_model
 from clnetworks import CLnetwork
 from metric import evaluate_tasks_multihead, ConfusionMatrix
 
@@ -8,14 +8,14 @@ from metric import evaluate_tasks_multihead, ConfusionMatrix
 class LwFnetwork(CLnetwork):
     def __init__(self, args, fold_num, logs):
         super(LwFnetwork, self).__init__(args, fold_num, logs)
-        self.net = LwFmodel.LwFSleepNet(self.num_channels, args.dropout, args.task_num, self.args.enable_multihead)
+        self.net = multihead_model.MultiHeadSleepNet(self.num_channels, args.dropout, args.task_num, self.args.enable_multihead)
         self.net.apply(init_weight)
         self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         self.loss = nn.CrossEntropyLoss(reduction='none')
         self.net.to(self.device)
         self.kldloss = nn.KLDivLoss(reduction='none')
         '''distill settings'''
-        self.teacher_model = LwFmodel.LwFSleepNet(self.num_channels, args.dropout, args.task_num, self.args.enable_multihead)
+        self.teacher_model = multihead_model.MultiHeadSleepNet(self.num_channels, args.dropout, args.task_num, self.args.enable_multihead)
         self.teacher_model.to(self.device)
 
     def start_task(self):

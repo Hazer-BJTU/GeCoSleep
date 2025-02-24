@@ -4,7 +4,7 @@ import numpy as np
 from clnetworks import *
 from FCGRT.EEGGR import *
 from baselines.LwF import *
-from baselines.LwFmodel import *
+from baselines.multihead_model import *
 from baselines.EWC import *
 from data_preprocessing import *
 from logs import *
@@ -71,7 +71,7 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
             bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
             confusion = evaluate_tasks_packnet(bestnet, tests, confusion, clnetwork.device, clnetwork, args.valid_batch)
         elif args.replay_mode == 'lwf':
-            bestnet = LwFSleepNet(len(args.isruc1), args.dropout, args.task_num)
+            bestnet = MultiHeadSleepNet(len(args.isruc1), args.dropout, args.task_num)
             bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
             confusion = evaluate_tasks_multihead(bestnet, tests, confusion, clnetwork.device, args.valid_batch)
         else:

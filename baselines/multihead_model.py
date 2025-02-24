@@ -3,9 +3,9 @@ import torch.nn as nn
 from models import CNNencoders, ShortTermEncoder, LongTermEncoder
 
 
-class LwFSleepNet(nn.Module):
+class MultiHeadSleepNet(nn.Module):
     def __init__(self, input_channels, dropout, num_tasks, enable_multihead, **kwargs):
-        super(LwFSleepNet, self).__init__(**kwargs)
+        super(MultiHeadSleepNet, self).__init__(**kwargs)
         self.input_channels = input_channels
         self.dropout = dropout
         self.enable_multihead = enable_multihead
@@ -77,6 +77,6 @@ class LwFSleepNet(nn.Module):
 
 
 if __name__ == '__main__':
-    net = LwFSleepNet(2, 0.15, 4)
+    net = MultiHeadSleepNet(2, 0.15, 4)
     for name, module in net.named_modules():
         print(name)
