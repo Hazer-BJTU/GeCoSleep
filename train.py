@@ -42,7 +42,7 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
     print('start first testing...')
     if args.replay_mode == 'packnet':
         confusion = evaluate_tasks_packnet(clnetwork.net, tests, confusion, clnetwork.device, clnetwork, args.valid_batch)
-    elif args.replay_mode == 'lwf':
+    elif args.replay_mode == 'lwf' or args.replay_mode == 'generative':
         confusion = evaluate_tasks_multihead(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
     else:
         confusion = evaluate_tasks(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
@@ -70,8 +70,8 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
             bestnet = SleepNet(len(args.isruc1), args.dropout)
             bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
             confusion = evaluate_tasks_packnet(bestnet, tests, confusion, clnetwork.device, clnetwork, args.valid_batch)
-        elif args.replay_mode == 'lwf':
-            bestnet = MultiHeadSleepNet(len(args.isruc1), args.dropout, args.task_num)
+        elif args.replay_mode == 'lwf' or args.replay_mode == 'generative':
+            bestnet = MultiHeadSleepNet(len(args.isruc1), args.dropout, args.task_num, args.enable_multihead)
             bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
             confusion = evaluate_tasks_multihead(bestnet, tests, confusion, clnetwork.device, args.valid_batch)
         else:

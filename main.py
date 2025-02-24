@@ -41,7 +41,7 @@ parser.add_argument('--beta', type=float, nargs='?', default=0.1, help='coeffici
 parser.add_argument('--tau', type=float, nargs='?', default=5, help='temperature for knowledge distillation')
 parser.add_argument('--gamma', type=float, nargs='?', default=1e-2, help='updating rate for running loss')
 '''lwf settings'''
-parser.add_argument('--enable_multihead', type=bool, nargs='?', default=True, help='whether enable multihead')
+parser.add_argument('--enable_multihead', action='store_true', help='whether enable multihead')
 '''ewc settings'''
 parser.add_argument('--ewc_lambda', type=float, nargs='?', default=1e3, help='coefficient for ewc penalty')
 parser.add_argument('--ewc_gamma', type=float, nargs='?', default=0.4, help='updating rate for FIM')

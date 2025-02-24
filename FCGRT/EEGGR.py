@@ -1,13 +1,17 @@
-import numpy
 import torch.nn
 from models import *
 from . import generator
+from baselines.multihead_model import *
 from clnetworks import CLnetwork, linear_warmup_cosine_annealing
+from metric import ConfusionMatrix, evaluate_tasks_multihead
 
 
 class EEGGRnetwork(CLnetwork):
     def __init__(self, args, fold_num, logs):
         super(EEGGRnetwork, self).__init__(args, fold_num, logs)
+        self.net = MultiHeadSleepNet(self.num_channels, args.dropout, args.task_num, self.args.enable_multihead)
+        self.net.apply(init_weight)
+        self.net.to(self.device)
         '''generator settings'''
         self.start_training_generator = False
         self.num_epochs_solver = self.args.num_epochs - self.args.num_epochs_generator
@@ -20,7 +24,7 @@ class EEGGRnetwork(CLnetwork):
         self.mseloss = nn.MSELoss()
         self.kldloss = nn.KLDivLoss(reduction='none')
         '''replay settings'''
-        self.teacher_model = SleepNet(self.num_channels, self.args.dropout)
+        self.teacher_model = MultiHeadSleepNet(self.num_channels, args.dropout, args.task_num, self.args.enable_multihead)
         self.teacher_seq_gen = generator.SequentialVAE(512, 0)
         self.teacher_model.to(self.device)
         self.teacher_seq_gen.to(self.device)
@@ -81,7 +85,7 @@ class EEGGRnetwork(CLnetwork):
             if self.task > 0:
                 self.net.freeze_parameters()
             self.optimizer.zero_grad()
-            y_hat = self.net(X)
+            y_hat = self.net(X, self.task)
             L_current = self.loss(y_hat, y.view(-1))
             L = torch.mean(L_current)
             if self.task > 0:
@@ -89,12 +93,12 @@ class EEGGRnetwork(CLnetwork):
                 weights = self.running_task_loss.softmax(dim=0)
                 t = torch.multinomial(weights, y.shape[0], replacement=True)
                 F_fake = self.teacher_seq_gen.decoder.generate(y, t).detach()
-                y_fake = self.teacher_model.classify(F_fake).detach() / self.args.tau
-                y_pred = self.net.classify(F_fake)
+                y_fake = self.teacher_model.classify(F_fake, self.task - 1).detach() / self.args.tau
+                y_pred = self.net.classify(F_fake, self.task)
                 L_replay = torch.sum(self.kldloss(nn.functional.log_softmax(y_pred / self.args.tau, dim=1), y_fake.softmax(dim=1)), dim=1)
                 L = L + torch.mean(L_replay)
                 '''distillation for sample feature extractor'''
-                y_distill = self.teacher_model(X).detach() / self.args.tau
+                y_distill = self.teacher_model(X, self.task - 1).detach() / self.args.tau
                 L_distill = torch.sum(self.kldloss(nn.functional.log_softmax(y_hat / self.args.tau, dim=1), y_distill.softmax(dim=1)), dim=1)
                 L = L + torch.mean(L_distill)
                 '''update running task loss'''
@@ -136,8 +140,8 @@ class EEGGRnetwork(CLnetwork):
                 t_prime = torch.ones(y.shape[0], dtype=torch.int64, requires_grad=False, device=self.device) * self.task
             F_hat, L_kl = self.seq_gen(F_prime, y_prime, t_prime)
             L_rec = self.mseloss(F_hat, F_prime)
-            pred_true = self.net.classify(F_prime).detach() / self.args.tau
-            pred_fake = self.net.classify(F_hat)
+            pred_true = self.net.classify(F_prime, self.task).detach() / self.args.tau
+            pred_fake = self.net.classify(F_hat, self.task)
             L_task = torch.sum(self.kldloss(nn.functional.log_softmax(pred_fake / self.args.tau, dim=1), pred_true.softmax(dim=1)), dim=1)
             if self.task > 0:
                 '''update running task loss'''
@@ -153,12 +157,41 @@ class EEGGRnetwork(CLnetwork):
 
     def end_epoch(self, valid_dataset):
         if self.epoch < self.num_epochs_solver:
-            super(EEGGRnetwork, self).end_epoch(valid_dataset)
-            '''
-            if self.task > 0:
-                weights = self.running_task_loss.softmax(dim=0)
-                print(f'task replay distribution: {torch.round(weights, decimals=2).data}')
-            '''
+            learning_rate = self.optimizer.state_dict()['param_groups'][0]['lr']
+            train_acc, train_mf1 = self.confusion_matrix.accuracy(), self.confusion_matrix.macro_f1()
+            print(
+                f'epoch: {self.epoch}, train loss: {self.train_loss / self.cnt:.3f}, train accuracy: {train_acc:.3f}, '
+                f"macro F1: {train_mf1:.3f}, 1000 lr: {learning_rate * 1000:.3f}")
+            self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch}'], {
+                'train loss': self.train_loss / self.cnt,
+                'train accuracy': train_acc,
+                'train mF1': train_mf1,
+                '1000 lr': learning_rate * 1000
+            })
+            if (self.epoch + 1) % self.args.valid_epoch == 0:
+                print(f'validating on the datasets...')
+                valid_confusion = ConfusionMatrix(1)
+                valid_confusion = evaluate_tasks_multihead(self.net, [valid_dataset], valid_confusion,
+                                                           self.device, self.args.valid_batch, self.task)
+                valid_acc, valid_mf1 = valid_confusion.accuracy(), valid_confusion.macro_f1()
+                print(f'valid accuracy: {valid_acc:.3f}, valid macro F1: {valid_mf1:.3f}')
+                self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'valid epoch:{self.epoch}'], {
+                    'valid accuracy': valid_acc,
+                    'valid mF1': valid_mf1
+                })
+                if valid_acc + valid_mf1 > self.best_valid_acc and self.epoch + 1 >= self.args.min_epoch:
+                    self.logs.append(
+                        ['train_info', f'task{self.task}_fold{self.fold_num}', f'valid epoch:{self.epoch}', 'saved'],
+                        True)
+                    self.best_train_loss = self.train_loss / self.cnt
+                    self.best_train_acc = train_acc
+                    self.best_valid_acc = valid_acc + valid_mf1
+                    self.best_net = './modelsaved/' + str(self.args.replay_mode) + '_task' + str(
+                        self.task) + '_fold' + str(self.fold_num) + '.pth'
+                    print(f'model saved: {self.best_net}')
+                    torch.save(self.net.state_dict(), self.best_net)
+            self.epoch += 1
+            self.scheduler.step()
         else:
             if self.task + 1 == self.args.task_num:
                 return
@@ -175,11 +208,6 @@ class EEGGRnetwork(CLnetwork):
                 'kl loss': self.kl_loss / self.cnt,
                 '1000 lr': lr_seq_gen * 1000
             })
-            '''
-            if self.task > 0:
-                weights = self.running_task_loss.softmax(dim=0)
-                print(f'task replay distribution: {torch.round(weights, decimals=2).data}')
-            '''
             self.epoch += 1
             self.sched_seq_gen.step()
         if self.task > 0:
