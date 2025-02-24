@@ -5,6 +5,7 @@ from clnetworks import *
 from FCGRT.EEGGR import *
 from baselines.LwF import *
 from baselines.LwFmodel import *
+from baselines.EWC import *
 from data_preprocessing import *
 from logs import *
 
@@ -35,6 +36,8 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
         clnetwork = ExperienceReplay(args, fold_idx, logs)
     elif args.replay_mode == 'lwf':
         clnetwork = LwFnetwork(args, fold_idx, logs)
+    elif args.replay_mode == 'ewc':
+        clnetwork = EWCnetwork(args, fold_idx, logs)
     confusion = ConfusionMatrix(args.task_num)
     print('start first testing...')
     if args.replay_mode == 'packnet':
@@ -57,7 +60,10 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
                 else:
                     clnetwork.observe(X, y, False)
             clnetwork.end_epoch(valids[task_idx])
-        clnetwork.end_task()
+        if args.replay_mode == 'ewc':
+            clnetwork.end_task(trains[task_idx])
+        else:
+            clnetwork.end_task()
         confusion.clear()
         print(f'start testing...')
         if args.replay_mode == 'packnet':
