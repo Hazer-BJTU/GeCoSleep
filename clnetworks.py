@@ -1,8 +1,6 @@
 import math
+import torch
 import random
-
-import torch.optim.lr_scheduler
-
 from models import *
 from metric import *
 

@@ -6,16 +6,30 @@ from datetime import datetime
 
 class LogDocument:
     def __init__(self, args):
-        self.assignment_idx = random.randint(100, 256)
-        self.file_path = (str(args.replay_mode) + f'_experiment{self.assignment_idx}_' +
-                          datetime.now().strftime("%Y-%m-%d") + '.json')
+        self.args = args
+        self.assignment_idx = None
+        self.file_path = None
+        while True:
+            if self.try_assign_filename():
+                break
         self.all_information = {
             'log_starting_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'log_ending_time': '',
             'exp_assignment_index': self.assignment_idx,
             'exp_args': vars(args),
             'performance': {},
             'train_info': {}
         }
+
+    def try_assign_filename(self):
+        self.assignment_idx = random.randint(1000, 9999)
+        if 'Joint' in self.args.task_names:
+            self.file_path = ('joint' + f'_experiment{self.assignment_idx}_' +
+                              datetime.now().strftime("%Y-%m-%d") + '.json')
+        else:
+            self.file_path = (str(self.args.replay_mode) + f'_experiment{self.assignment_idx}_' +
+                              datetime.now().strftime("%Y-%m-%d") + '.json')
+        return not os.path.exists(os.path.join('results', self.file_path))
 
     def append(self, fields, content):
         pointer = self.all_information
@@ -34,6 +48,7 @@ class LogDocument:
             cnt += 1
 
     def write(self):
+        self.all_information['log_ending_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(os.path.join('results', self.file_path), 'w', encoding='utf-8') as file:
             json.dump(self.all_information, file, indent=4)
 

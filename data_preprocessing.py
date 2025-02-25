@@ -281,6 +281,24 @@ def load_all_datasets(args):
                                                        args.total_num['Sleep-EDF'], normalize)
             datas.append(task_data)
             labels.append(task_label)
+        elif task_name == 'Joint':
+            normalize = args.normalize
+            file_path_isruc1 = os.path.join(args.path.prefix, args.isruc1_path)
+            file_path_shhs = os.path.join(args.path.prefix, args.shhs_path)
+            file_path_mass = os.path.join(args.path.prefix, args.mass_path)
+            file_path_sleep_edf = os.path.join(args.path.prefix, args.sleep_edf_path)
+            task_data_isruc1, task_label_isruc1 = load_data_isruc1(file_path_isruc1, args.window_size, args.isruc1,
+                                                                   args.total_num['ISRUC1'], normalize)
+            task_data_shhs, task_label_shhs = load_data_shhs(file_path_shhs, args.window_size, args.shhs,
+                                                             args.total_num['SHHS'], normalize)
+            task_data_mass, task_label_mass = load_data_mass(file_path_mass, args.window_size, args.mass,
+                                                             args.total_num['MASS'], normalize)
+            task_data_sleep_edf, task_label_sleep_edf = load_data_sleepedf(file_path_sleep_edf, args.window_size, args.sleep_edf,
+                                                                           args.total_num['Sleep-EDF'], normalize)
+            task_data = task_data_isruc1 + task_data_shhs + task_data_mass + task_data_sleep_edf
+            task_label = task_label_isruc1 + task_label_shhs + task_label_mass + task_label_sleep_edf
+            datas.append(task_data)
+            labels.append(task_label)
     return datas, labels
 
 
