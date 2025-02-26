@@ -23,7 +23,7 @@ class LogDocument:
 
     def try_assign_filename(self):
         self.assignment_idx = random.randint(1000, 9999)
-        if 'Joint' in self.args.task_names:
+        if self.args.joint_training:
             self.file_path = ('joint' + f'_experiment{self.assignment_idx}_' +
                               datetime.now().strftime("%Y-%m-%d") + '.json')
         else:

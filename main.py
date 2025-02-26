@@ -48,6 +48,7 @@ parser.add_argument('--ewc_gamma', type=float, nargs='?', default=0.4, help='upd
 parser.add_argument('--ewc_batches', type=int, nargs='?', default=256, help='number of batches for calculating FIM')
 '''other settings'''
 parser.add_argument('--replay_buffer', type=float, nargs='?', default=128, help='replay buffer size for each task')
+parser.add_argument('--joint_training', action='store_true', help='start joint training')
 args = parser.parse_args()
 
 if __name__ == '__main__':
