@@ -46,7 +46,7 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
         confusion = evaluate_tasks_multihead(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
     else:
         confusion = evaluate_tasks(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
-    test_results.append((confusion.accuracy(), confusion.macro_f1()))
+    test_results.append((confusion.accuracy(keep_list=True), confusion.macro_f1(keep_list=True)))
     for task_idx in range(args.task_num):
         print(f'start task {task_idx}:')
         clnetwork.start_task()
@@ -78,7 +78,7 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
             bestnet = SleepNet(len(args.isruc1), args.dropout)
             bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
             confusion = evaluate_tasks(bestnet, tests, confusion, clnetwork.device, args.valid_batch)
-        test_results.append((confusion.accuracy(), confusion.macro_f1()))
+        test_results.append((confusion.accuracy(keep_list=True), confusion.macro_f1(keep_list=True)))
     return test_results
 
 

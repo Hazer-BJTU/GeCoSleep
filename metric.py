@@ -22,7 +22,7 @@ class ConfusionMatrix:
         for idx in range(y.shape[0]):
             self.mat[t][y_hat[idx]][y[idx]] += 1
 
-    def accuracy(self):
+    def accuracy(self, keep_list=False):
         acc = []
         for idx in range(self.num_tasks):
             total = torch.sum(self.mat[idx]).item()
@@ -30,12 +30,12 @@ class ConfusionMatrix:
             for i in range(self.num_catagories):
                 true += self.mat[idx][i][i].item()
             acc.append(true / max(total, 1))
-        if len(acc) == 1:
+        if len(acc) == 1 and not keep_list:
             return acc[0]
         else:
             return acc
 
-    def macro_f1(self):
+    def macro_f1(self, keep_list=False):
         mf1 = []
         for idx in range(self.num_tasks):
             f1 = 0
@@ -49,7 +49,7 @@ class ConfusionMatrix:
                 f1 += 2 * precision * recall / max(precision + recall, 1)
             f1 /= self.num_catagories
             mf1.append(f1)
-        if len(mf1) == 1:
+        if len(mf1) == 1 and not keep_list:
             return mf1[0]
         else:
             return mf1

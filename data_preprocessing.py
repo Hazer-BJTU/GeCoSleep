@@ -283,10 +283,10 @@ def load_all_datasets(args):
             labels.append(task_label)
         elif task_name == 'Joint':
             normalize = args.normalize
-            file_path_isruc1 = os.path.join(args.path.prefix, args.isruc1_path)
-            file_path_shhs = os.path.join(args.path.prefix, args.shhs_path)
-            file_path_mass = os.path.join(args.path.prefix, args.mass_path)
-            file_path_sleep_edf = os.path.join(args.path.prefix, args.sleep_edf_path)
+            file_path_isruc1 = os.path.join(args.path_prefix, args.isruc1_path)
+            file_path_shhs = os.path.join(args.path_prefix, args.shhs_path)
+            file_path_mass = os.path.join(args.path_prefix, args.mass_path)
+            file_path_sleep_edf = os.path.join(args.path_prefix, args.sleep_edf_path)
             task_data_isruc1, task_label_isruc1 = load_data_isruc1(file_path_isruc1, args.window_size, args.isruc1,
                                                                    args.total_num['ISRUC1'], normalize)
             task_data_shhs, task_label_shhs = load_data_shhs(file_path_shhs, args.window_size, args.shhs,
