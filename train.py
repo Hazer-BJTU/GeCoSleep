@@ -162,8 +162,8 @@ def write_format(R, args, filepath='cl_output_record.txt', logs=None):
                 fwt += R[j][j][0] - R[0][j][0]
                 fwtf1 += R[j][j][1] - R[0][j][1]
         bestacc, bestmf1 = bestacc / args.task_num, bestmf1 / args.task_num
-        aacc, bwt, fwt = aacc / args.task_num, bwt / (args.task_num - 1), fwt / (args.task_num - 1)
-        af1, bwtf1, fwtf1 = af1 / args.task_num, bwtf1 / (args.task_num - 1), fwtf1 / (args.task_num - 1)
+        aacc, bwt, fwt = aacc / args.task_num, bwt / max(args.task_num - 1, 1), fwt / max(args.task_num - 1, 1)
+        af1, bwtf1, fwtf1 = af1 / args.task_num, bwtf1 / max(args.task_num - 1, 1), fwtf1 / max(args.task_num - 1, 1)
         print(f'average acc: {aacc:.3f}, average macro F1: {af1:.3f}')
         print(f'best acc: {bestacc:.3f}, best macro F1: {bestmf1:.3f}')
         print(f'BWT: {bwt:.3f}, BWT(mF1): {bwtf1:.3f}')
