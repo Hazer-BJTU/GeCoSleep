@@ -109,15 +109,26 @@ def train_k_fold(args):
     set_random_seed(args.random_seed)
     fold_task_test_idx, fold_task_valid_idx, fold_task_train_idx = allocate_fold(args)
     datas, labels = load_all_datasets(args)
+    if args.joint_training:
+        args.task_num = 1
     total_results = torch.zeros((args.task_num + 1, args.task_num, 2), dtype=torch.float32, requires_grad=False)
     for fold_idx in range(len(fold_task_test_idx)):
-        trains, valids, tests = create_fold_task_separated(
-            fold_task_train_idx[fold_idx],
-            fold_task_valid_idx[fold_idx],
-            fold_task_test_idx[fold_idx],
-            datas,
-            labels
-        )
+        if args.joint_training:
+            trains, valids, tests = create_fold_monolithic(
+                fold_task_train_idx[fold_idx],
+                fold_task_valid_idx[fold_idx],
+                fold_task_test_idx[fold_idx],
+                datas,
+                labels
+            )
+        else:
+            trains, valids, tests = create_fold_task_separated(
+                fold_task_train_idx[fold_idx],
+                fold_task_valid_idx[fold_idx],
+                fold_task_test_idx[fold_idx],
+                datas,
+                labels
+            )
         print(f'start fold {fold_idx}:')
         test_results = train_cl(args, trains, valids, tests, fold_idx, exp_log)
         exp_log.update_test_results(test_results, fold_idx)
@@ -169,10 +180,12 @@ def write_format(R, args, filepath='cl_output_record.txt', logs=None):
         print(f'BWT: {bwt:.3f}, BWT(mF1): {bwtf1:.3f}')
         print(f'FWT: {fwt:.3f}, FWT(mF1): {fwtf1:.3f}')
         if logs is not None:
-            logs.append(['performance', 'average'], {'acc': aacc.item(), 'mF1': af1.item()})
-            logs.append(['performance', 'best'], {'acc': bestacc.item(), 'mF1': bestmf1.item()})
-            logs.append(['performance', 'BWT'], {'acc': bwt.item(), 'mF1': bwtf1.item()})
-            logs.append(['performance', 'FWT'], {'acc': fwt.item(), 'mF1': fwtf1.item()})
+            def to_float(x):
+                return x if isinstance(x, float) else x.item()
+            logs.append(['performance', 'average'], {'acc': to_float(aacc), 'mF1': to_float(af1)})
+            logs.append(['performance', 'best'], {'acc': to_float(bestacc), 'mF1': to_float(bestmf1)})
+            logs.append(['performance', 'BWT'], {'acc': to_float(bwt), 'mF1': to_float(bwtf1)})
+            logs.append(['performance', 'FWT'], {'acc': to_float(fwt), 'mF1': to_float(fwtf1)})
     sys.stdout = original_stdout
 
 

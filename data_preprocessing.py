@@ -194,32 +194,38 @@ class DataWrapper(Dataset):
         return len(self.data)
 
 
-def create_fold(train, valid, test, datas_tasklist, labels_tasklist):
-    train_data, train_label, train_task = [], [], []
-    valid_data, valid_label, valid_task = [], [], []
-    test_data, test_label, test_task = [], [], []
-    t = 0
+def create_fold_monolithic(train, valid, test, datas_tasklist, labels_tasklist):
+    train_datasets = []
+    valid_datasets = []
+    test_datasets = []
+    cnt = 0
+    datas_selected, labels_selected = [], []
     for datas, labels in zip(datas_tasklist, labels_tasklist):
-        for idx in train:
+        for idx in train[cnt]:
             for X, y in zip(datas[idx], labels[idx]):
-                train_data.append(X)
-                train_label.append(y)
-                train_task.append(t)
-        for idx in valid:
+                datas_selected.append(X)
+                labels_selected.append(y)
+        cnt += 1
+    train_datasets.append(DataWrapper(datas_selected, labels_selected))
+    cnt = 0
+    datas_selected, labels_selected = [], []
+    for datas, labels in zip(datas_tasklist, labels_tasklist):
+        for idx in valid[cnt]:
             for X, y in zip(datas[idx], labels[idx]):
-                valid_data.append(X)
-                valid_label.append(y)
-                valid_task.append(t)
-        for idx in test:
+                datas_selected.append(X)
+                labels_selected.append(y)
+        cnt += 1
+    valid_datasets.append(DataWrapper(datas_selected, labels_selected))
+    cnt = 0
+    datas_selected, labels_selected = [], []
+    for datas, labels in zip(datas_tasklist, labels_tasklist):
+        for idx in test[cnt]:
             for X, y in zip(datas[idx], labels[idx]):
-                test_data.append(X)
-                test_label.append(y)
-                test_task.append(t)
-        t += 1
-    train_dataset = DataWrapper(train_data, train_label)
-    valid_dataset = DataWrapper(valid_data, valid_label)
-    test_dataset = DataWrapper(test_data, test_label)
-    return train_dataset, valid_dataset, test_dataset
+                datas_selected.append(X)
+                labels_selected.append(y)
+        cnt += 1
+    test_datasets.append(DataWrapper(datas_selected, labels_selected))
+    return train_datasets, valid_datasets, test_datasets
 
 
 def create_fold_task_separated(train, valid, test, datas_tasklist, labels_tasklist):
@@ -279,24 +285,6 @@ def load_all_datasets(args):
             file_path = os.path.join(args.path_prefix, args.sleep_edf_path)
             task_data, task_label = load_data_sleepedf(file_path, args.window_size, args.sleep_edf,
                                                        args.total_num['Sleep-EDF'], normalize)
-            datas.append(task_data)
-            labels.append(task_label)
-        elif task_name == 'Joint':
-            normalize = args.normalize
-            file_path_isruc1 = os.path.join(args.path_prefix, args.isruc1_path)
-            file_path_shhs = os.path.join(args.path_prefix, args.shhs_path)
-            file_path_mass = os.path.join(args.path_prefix, args.mass_path)
-            file_path_sleep_edf = os.path.join(args.path_prefix, args.sleep_edf_path)
-            task_data_isruc1, task_label_isruc1 = load_data_isruc1(file_path_isruc1, args.window_size, args.isruc1,
-                                                                   args.total_num['ISRUC1'], normalize)
-            task_data_shhs, task_label_shhs = load_data_shhs(file_path_shhs, args.window_size, args.shhs,
-                                                             args.total_num['SHHS'], normalize)
-            task_data_mass, task_label_mass = load_data_mass(file_path_mass, args.window_size, args.mass,
-                                                             args.total_num['MASS'], normalize)
-            task_data_sleep_edf, task_label_sleep_edf = load_data_sleepedf(file_path_sleep_edf, args.window_size, args.sleep_edf,
-                                                                           args.total_num['Sleep-EDF'], normalize)
-            task_data = task_data_isruc1 + task_data_shhs + task_data_mass + task_data_sleep_edf
-            task_label = task_label_isruc1 + task_label_shhs + task_label_mass + task_label_sleep_edf
             datas.append(task_data)
             labels.append(task_label)
     return datas, labels
