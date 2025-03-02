@@ -77,6 +77,6 @@ class MultiHeadSleepNet(nn.Module):
 
 
 if __name__ == '__main__':
-    net = MultiHeadSleepNet(2, 0.15, 4)
+    net = MultiHeadSleepNet(2, 0.15, 4, True)
     for name, module in net.named_modules():
         print(name)
