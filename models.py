@@ -14,25 +14,24 @@ class MultiScaleCNN(nn.Module):
         self.pooling = pooling
         self.dropout = dropout
         self.block0 = nn.Sequential(
-            nn.Conv1d(input_channels, hiddens, kernel_size=kernel_size, stride=stride),
-            nn.BatchNorm1d(hiddens), nn.ReLU(),
-            nn.MaxPool1d(kernel_size=pooling, stride=pooling), nn.Dropout(dropout)
+            nn.Conv1d(input_channels, hiddens, kernel_size=kernel_size[0], stride=stride),
+            nn.BatchNorm1d(hiddens), nn.ReLU(), nn.MaxPool1d(kernel_size=pooling, stride=pooling),
+            nn.Dropout(dropout)
         )
         self.block1 = nn.Sequential(
-            nn.Conv1d(hiddens, output_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(hiddens, output_channels, kernel_size=kernel_size[1], stride=1, padding='same'),
             nn.BatchNorm1d(output_channels), nn.ReLU(),
-            nn.Conv1d(output_channels, output_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(output_channels, output_channels, kernel_size=kernel_size[1], stride=1, padding='same'),
             nn.BatchNorm1d(output_channels), nn.ReLU(),
-            nn.Conv1d(output_channels, output_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(output_channels, output_channels, kernel_size=kernel_size[1], stride=1, padding='same'),
             nn.BatchNorm1d(output_channels)
         )
         self.block2 = nn.Sequential(
-            nn.Conv1d(hiddens, output_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(hiddens, output_channels, kernel_size=kernel_size[1], stride=1, padding='same'),
             nn.BatchNorm1d(output_channels)
         )
         self.block3 = nn.Sequential(
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=pooling // 4, stride=pooling // 4), nn.Dropout(dropout)
+            nn.ReLU(), nn.MaxPool1d(kernel_size=pooling // 4, stride=pooling // 4)
         )
 
     def forward(self, X):
@@ -48,10 +47,11 @@ class CNNencoders(nn.Module):
         super(CNNencoders, self).__init__(**kwargs)
         self.input_channels = input_channels
         self.dropout = dropout
-        self.encoder1 = MultiScaleCNN(input_channels, 64, 128, 400, 50, 8, dropout)
-        self.encoder2 = MultiScaleCNN(input_channels, 64, 128, 200, 25, 8, dropout)
-        self.encoder3 = MultiScaleCNN(input_channels, 64, 128, 100, 12, 8, dropout)
-        self.encoder4 = MultiScaleCNN(input_channels, 64, 128, 50, 6, 8, dropout)
+        self.encoder1 = MultiScaleCNN(input_channels, 64, 128, [400, 3], 50, 8, dropout)
+        self.encoder2 = MultiScaleCNN(input_channels, 64, 128, [200, 5], 25, 8, dropout)
+        self.encoder3 = MultiScaleCNN(input_channels, 64, 128, [100, 7], 12, 8, dropout)
+        self.encoder4 = MultiScaleCNN(input_channels, 64, 128, [50, 9], 6, 8, dropout)
+        self.dropout_layer = nn.Dropout(dropout)
 
     def forward(self, X):
         X1 = self.encoder1(X)
@@ -59,6 +59,7 @@ class CNNencoders(nn.Module):
         X3 = self.encoder3(X)
         X4 = self.encoder4(X)
         output = torch.cat((X1, X2, X3, X4), dim=2)
+        output = self.dropout_layer(output)
         output = output.permute(0, 2, 1).contiguous()
         return output
 
