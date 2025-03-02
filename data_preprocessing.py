@@ -179,16 +179,17 @@ def load_data_sleepedf(filepath, window_size, channels, total_num, normalize):
 
 
 class DataWrapper(Dataset):
-    def __init__(self, data, label, args, task=None):
+    def __init__(self, data, label, args, augmentation=False, task=None):
         assert len(data) == len(label)
         self.data = data
         self.label = label
         self.task = task
         self.args = args
+        self.augmentation = augmentation
 
     def __getitem__(self, item):
         data, label = self.data[item], self.label[item]
-        if random.random() < self.args.time_reverse_rate:
+        if self.augmentation and random.random() < self.args.time_reverse_rate:
             data = torch.flip(data, dims=[-1])
         if self.task is None:
             return data, label
@@ -211,7 +212,7 @@ def create_fold_monolithic(train, valid, test, datas_tasklist, labels_tasklist, 
                 datas_selected.append(X)
                 labels_selected.append(y)
         cnt += 1
-    train_datasets.append(DataWrapper(datas_selected, labels_selected, args))
+    train_datasets.append(DataWrapper(datas_selected, labels_selected, args, True))
     cnt = 0
     datas_selected, labels_selected = [], []
     for datas, labels in zip(datas_tasklist, labels_tasklist):
@@ -244,7 +245,7 @@ def create_fold_task_separated(train, valid, test, datas_tasklist, labels_taskli
             for X, y in zip(datas[idx], labels[idx]):
                 datas_selected.append(X)
                 labels_selected.append(y)
-        train_datasets.append(DataWrapper(datas_selected, labels_selected, args))
+        train_datasets.append(DataWrapper(datas_selected, labels_selected, args, True))
         datas_selected, labels_selected = [], []
         for idx in valid[cnt]:
             for X, y in zip(datas[idx], labels[idx]):
