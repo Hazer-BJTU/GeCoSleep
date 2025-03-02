@@ -32,12 +32,12 @@ class SequentialVAEencoder(nn.Module):
         self.task2vec = nn.Embedding(max_task_num, embeddings)
         self.positional_encoding = PositionalEncoding(embeddings)
         self.block1 = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True, dim_feedforward=1024),
+            nn.TransformerEncoderLayer(embeddings, heads, dim_feedforward=1024, dropout=dropout, batch_first=True),
             num_layers=layers
         )
         self.label2vec = nn.Embedding(5, embeddings)
         self.block2 = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True, dim_feedforward=1024),
+            nn.TransformerEncoderLayer(embeddings, heads, dim_feedforward=1024, dropout=dropout, batch_first=True),
             num_layers=layers
         )
         self.mean = nn.Sequential(
@@ -80,12 +80,12 @@ class SequentialVAEdecoder(nn.Module):
         self.task2vec = nn.Embedding(max_task_num, embeddings)
         self.positional_encoding = PositionalEncoding(embeddings)
         self.block1 = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True, dim_feedforward=1024),
+            nn.TransformerEncoderLayer(embeddings, heads, dim_feedforward=1024, dropout=dropout, batch_first=True),
             num_layers=layers
         )
         self.label2vec = nn.Embedding(5, embeddings)
         self.block2 = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True, dim_feedforward=1024),
+            nn.TransformerEncoderLayer(embeddings, heads, dim_feedforward=1024, dropout=dropout, batch_first=True),
             num_layers=layers
         )
 
