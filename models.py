@@ -135,7 +135,7 @@ class SleepNet(nn.Module):
             nn.Linear(512, 1024),
             nn.ReLU(), nn.Dropout(dropout),
             nn.Linear(1024, 512),
-            nn.ReLU(), nn.LayerNorm(512)
+            nn.LayerNorm(512), nn.ReLU()
         )
         self.classifier = nn.Sequential(
             nn.Linear(1024, 512),

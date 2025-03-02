@@ -16,7 +16,7 @@ class MultiHeadSleepNet(nn.Module):
             nn.Linear(512, 1024),
             nn.ReLU(), nn.Dropout(dropout),
             nn.Linear(1024, 512),
-            nn.ReLU(), nn.LayerNorm(512)
+            nn.LayerNorm(512), nn.ReLU()
         )
         self.classifiers = nn.ModuleList()
         if enable_multihead:
