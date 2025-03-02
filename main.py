@@ -30,7 +30,7 @@ parser.add_argument('--batch_size', type=int, nargs='?', default=32, help='batch
 parser.add_argument('--valid_epoch', type=int, nargs='?', default=5, help='validating interval')
 parser.add_argument('--valid_batch', type=int, nargs='?', default=32, help='validating batch size')
 parser.add_argument('--dropout', type=float, nargs='?', default=0.1, help='drop out ratio')
-parser.add_argument('--weight_decay', type=float, nargs='?', default=1e-5, help='weight decay value')
+parser.add_argument('--weight_decay', type=float, nargs='?', default=0, help='weight decay value')
 parser.add_argument('--lr', type=float, nargs='?', default=1e-4, help='learning rate')
 parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='continual learning strategy')
 parser.add_argument('--min_epoch', type=float, nargs='?', default=15, help='min epochs for model saving')
@@ -46,6 +46,8 @@ parser.add_argument('--enable_multihead', action='store_true', help='whether ena
 parser.add_argument('--ewc_lambda', type=float, nargs='?', default=1e3, help='coefficient for ewc penalty')
 parser.add_argument('--ewc_gamma', type=float, nargs='?', default=0.4, help='updating rate for FIM')
 parser.add_argument('--ewc_batches', type=int, nargs='?', default=256, help='number of batches for calculating FIM')
+'''data augmentation settings'''
+parser.add_argument('--time_reverse_rate', type=float, nargs='?', default=0.05, help='frequency for time reversion')
 '''other settings'''
 parser.add_argument('--replay_buffer', type=float, nargs='?', default=128, help='replay buffer size for each task')
 parser.add_argument('--joint_training', action='store_true', help='start joint training')
