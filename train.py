@@ -119,7 +119,8 @@ def train_k_fold(args):
                 fold_task_valid_idx[fold_idx],
                 fold_task_test_idx[fold_idx],
                 datas,
-                labels
+                labels,
+                args
             )
         else:
             trains, valids, tests = create_fold_task_separated(
@@ -127,7 +128,8 @@ def train_k_fold(args):
                 fold_task_valid_idx[fold_idx],
                 fold_task_test_idx[fold_idx],
                 datas,
-                labels
+                labels,
+                args
             )
         print(f'start fold {fold_idx}:')
         test_results = train_cl(args, trains, valids, tests, fold_idx, exp_log)
