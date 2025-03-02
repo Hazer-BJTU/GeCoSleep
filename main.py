@@ -29,7 +29,7 @@ parser.add_argument('--num_epochs', type=int, nargs='?', default=200, help='numb
 parser.add_argument('--batch_size', type=int, nargs='?', default=32, help='batch size')
 parser.add_argument('--valid_epoch', type=int, nargs='?', default=5, help='validating interval')
 parser.add_argument('--valid_batch', type=int, nargs='?', default=32, help='validating batch size')
-parser.add_argument('--dropout', type=float, nargs='?', default=0.175, help='drop out ratio')
+parser.add_argument('--dropout', type=float, nargs='?', default=0.1, help='drop out ratio')
 parser.add_argument('--weight_decay', type=float, nargs='?', default=1e-5, help='weight decay value')
 parser.add_argument('--lr', type=float, nargs='?', default=1e-4, help='learning rate')
 parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='continual learning strategy')
@@ -38,7 +38,7 @@ parser.add_argument('--min_epoch', type=float, nargs='?', default=15, help='min 
 parser.add_argument('--num_epochs_generator', type=int, nargs='?', default=100, help='number of epochs for generator')
 parser.add_argument('--lr_seq_gen', type=float, nargs='?', default=1e-4, help='learning rate for sequential generator')
 parser.add_argument('--beta', type=float, nargs='?', default=0.1, help='coefficient of kl loss')
-parser.add_argument('--tau', type=float, nargs='?', default=2, help='temperature for knowledge distillation')
+parser.add_argument('--tau', type=float, nargs='?', default=1.5, help='temperature for knowledge distillation')
 parser.add_argument('--gamma', type=float, nargs='?', default=1e-2, help='updating rate for running loss')
 '''lwf settings'''
 parser.add_argument('--enable_multihead', action='store_true', help='whether enable multihead')
