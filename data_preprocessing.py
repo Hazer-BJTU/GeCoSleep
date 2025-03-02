@@ -1,6 +1,7 @@
 import numpy as np
 import pickle as pkl
 import scipy.io as sio
+import random
 import torch
 import os
 from scipy import signal
@@ -178,23 +179,27 @@ def load_data_sleepedf(filepath, window_size, channels, total_num, normalize):
 
 
 class DataWrapper(Dataset):
-    def __init__(self, data, label, task=None):
+    def __init__(self, data, label, args, task=None):
         assert len(data) == len(label)
         self.data = data
         self.label = label
         self.task = task
+        self.args = args
 
     def __getitem__(self, item):
+        data, label = self.data[item], self.label[item]
+        if random.random() < self.args.time_reverse_rate:
+            data = torch.flip(data, dims=[-1])
         if self.task is None:
-            return self.data[item], self.label[item]
+            return data, label
         else:
-            return self.data[item], self.label[item], self.task[item]
+            return data, label, self.task[item]
 
     def __len__(self):
         return len(self.data)
 
 
-def create_fold_monolithic(train, valid, test, datas_tasklist, labels_tasklist):
+def create_fold_monolithic(train, valid, test, datas_tasklist, labels_tasklist, args):
     train_datasets = []
     valid_datasets = []
     test_datasets = []
@@ -206,7 +211,7 @@ def create_fold_monolithic(train, valid, test, datas_tasklist, labels_tasklist):
                 datas_selected.append(X)
                 labels_selected.append(y)
         cnt += 1
-    train_datasets.append(DataWrapper(datas_selected, labels_selected))
+    train_datasets.append(DataWrapper(datas_selected, labels_selected, args))
     cnt = 0
     datas_selected, labels_selected = [], []
     for datas, labels in zip(datas_tasklist, labels_tasklist):
@@ -215,7 +220,7 @@ def create_fold_monolithic(train, valid, test, datas_tasklist, labels_tasklist):
                 datas_selected.append(X)
                 labels_selected.append(y)
         cnt += 1
-    valid_datasets.append(DataWrapper(datas_selected, labels_selected))
+    valid_datasets.append(DataWrapper(datas_selected, labels_selected, args))
     cnt = 0
     datas_selected, labels_selected = [], []
     for datas, labels in zip(datas_tasklist, labels_tasklist):
@@ -224,11 +229,11 @@ def create_fold_monolithic(train, valid, test, datas_tasklist, labels_tasklist):
                 datas_selected.append(X)
                 labels_selected.append(y)
         cnt += 1
-    test_datasets.append(DataWrapper(datas_selected, labels_selected))
+    test_datasets.append(DataWrapper(datas_selected, labels_selected, args))
     return train_datasets, valid_datasets, test_datasets
 
 
-def create_fold_task_separated(train, valid, test, datas_tasklist, labels_tasklist):
+def create_fold_task_separated(train, valid, test, datas_tasklist, labels_tasklist, args):
     train_datasets = []
     valid_datasets = []
     test_datasets = []
@@ -239,19 +244,19 @@ def create_fold_task_separated(train, valid, test, datas_tasklist, labels_taskli
             for X, y in zip(datas[idx], labels[idx]):
                 datas_selected.append(X)
                 labels_selected.append(y)
-        train_datasets.append(DataWrapper(datas_selected, labels_selected))
+        train_datasets.append(DataWrapper(datas_selected, labels_selected, args))
         datas_selected, labels_selected = [], []
         for idx in valid[cnt]:
             for X, y in zip(datas[idx], labels[idx]):
                 datas_selected.append(X)
                 labels_selected.append(y)
-        valid_datasets.append(DataWrapper(datas_selected, labels_selected))
+        valid_datasets.append(DataWrapper(datas_selected, labels_selected, args))
         datas_selected, labels_selected = [], []
         for idx in test[cnt]:
             for X, y in zip(datas[idx], labels[idx]):
                 datas_selected.append(X)
                 labels_selected.append(y)
-        test_datasets.append(DataWrapper(datas_selected, labels_selected))
+        test_datasets.append(DataWrapper(datas_selected, labels_selected, args))
         cnt += 1
     return train_datasets, valid_datasets, test_datasets
 

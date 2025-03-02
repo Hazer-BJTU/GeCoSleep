@@ -13,23 +13,33 @@ class MultiScaleCNN(nn.Module):
         self.stride = stride
         self.pooling = pooling
         self.dropout = dropout
-        self.block = nn.Sequential(
+        self.block0 = nn.Sequential(
             nn.Conv1d(input_channels, hiddens, kernel_size=kernel_size, stride=stride),
             nn.BatchNorm1d(hiddens), nn.LeakyReLU(0.1),
-            nn.MaxPool1d(kernel_size=pooling, stride=pooling), nn.Dropout(dropout),
+            nn.MaxPool1d(kernel_size=pooling, stride=pooling), nn.Dropout(dropout)
+        )
+        self.block1 = nn.Sequential(
             nn.Conv1d(hiddens, output_channels, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
             nn.Conv1d(output_channels, output_channels, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
             nn.Conv1d(output_channels, output_channels, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
-            nn.AvgPool1d(kernel_size=pooling // 4, stride=pooling // 4)
+            nn.BatchNorm1d(output_channels)
+        )
+        self.block2 = nn.Sequential(
+            nn.Conv1d(hiddens, output_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(output_channels)
+        )
+        self.block3 = nn.Sequential(
+            nn.LeakyReLU(0.1),
+            nn.MaxPool1d(kernel_size=pooling // 4, stride=pooling // 4), nn.Dropout(dropout)
         )
 
     def forward(self, X):
         batch_size, seq_length, num_channels, series = X.shape
         X = X.view(batch_size * seq_length, num_channels, series)
-        X = self.block(X)
+        X = self.block0(X)
+        X = self.block3(self.block1(X) + self.block2(X))
         return X
 
 
