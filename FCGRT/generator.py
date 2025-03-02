@@ -41,11 +41,11 @@ class SequentialVAEencoder(nn.Module):
             num_layers=layers
         )
         self.mean = nn.Sequential(
-            nn.Linear(embeddings, hiddens), nn.LeakyReLU(0.1),
+            nn.Linear(embeddings, hiddens), nn.ReLU(),
             nn.Linear(hiddens, embeddings)
         )
         self.std = nn.Sequential(
-            nn.Linear(embeddings, hiddens), nn.LeakyReLU(0.1),
+            nn.Linear(embeddings, hiddens), nn.ReLU(),
             nn.Linear(hiddens, embeddings), nn.Softplus()
         )
 

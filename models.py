@@ -15,14 +15,14 @@ class MultiScaleCNN(nn.Module):
         self.dropout = dropout
         self.block0 = nn.Sequential(
             nn.Conv1d(input_channels, hiddens, kernel_size=kernel_size, stride=stride),
-            nn.BatchNorm1d(hiddens), nn.LeakyReLU(0.1),
+            nn.BatchNorm1d(hiddens), nn.ReLU(),
             nn.MaxPool1d(kernel_size=pooling, stride=pooling), nn.Dropout(dropout)
         )
         self.block1 = nn.Sequential(
             nn.Conv1d(hiddens, output_channels, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
+            nn.BatchNorm1d(output_channels), nn.ReLU(),
             nn.Conv1d(output_channels, output_channels, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(output_channels), nn.LeakyReLU(0.1),
+            nn.BatchNorm1d(output_channels), nn.ReLU(),
             nn.Conv1d(output_channels, output_channels, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm1d(output_channels)
         )
@@ -31,7 +31,7 @@ class MultiScaleCNN(nn.Module):
             nn.BatchNorm1d(output_channels)
         )
         self.block3 = nn.Sequential(
-            nn.LeakyReLU(0.1),
+            nn.ReLU(),
             nn.MaxPool1d(kernel_size=pooling // 4, stride=pooling // 4), nn.Dropout(dropout)
         )
 
@@ -133,13 +133,13 @@ class SleepNet(nn.Module):
         self.long_term_encoder = LongTermEncoder(512, 8, 4, dropout)
         self.resblock = nn.Sequential(
             nn.Linear(512, 1024),
-            nn.LeakyReLU(0.1), nn.Dropout(dropout),
+            nn.ReLU(), nn.Dropout(dropout),
             nn.Linear(1024, 512),
-            nn.LeakyReLU(0.1), nn.LayerNorm(512)
+            nn.ReLU(), nn.LayerNorm(512)
         )
         self.classifier = nn.Sequential(
             nn.Linear(1024, 512),
-            nn.LeakyReLU(0.1), nn.Dropout(dropout),
+            nn.ReLU(), nn.Dropout(dropout),
             nn.Linear(512, 5)
         )
 

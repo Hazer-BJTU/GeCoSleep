@@ -14,16 +14,16 @@ class MultiHeadSleepNet(nn.Module):
         self.long_term_encoder = LongTermEncoder(512, 8, 4, dropout)
         self.resblock = nn.Sequential(
             nn.Linear(512, 1024),
-            nn.LeakyReLU(0.1), nn.Dropout(dropout),
+            nn.ReLU(), nn.Dropout(dropout),
             nn.Linear(1024, 512),
-            nn.LeakyReLU(0.1), nn.LayerNorm(512)
+            nn.ReLU(), nn.LayerNorm(512)
         )
         self.classifiers = nn.ModuleList()
         if enable_multihead:
             for idx in range(num_tasks):
                 classifier = nn.Sequential(
                     nn.Linear(1024, 512),
-                    nn.LeakyReLU(0.1), nn.Dropout(dropout),
+                    nn.ReLU(), nn.Dropout(dropout),
                     nn.Linear(512, 5)
                 )
                 self.classifiers.append(classifier)
@@ -31,7 +31,7 @@ class MultiHeadSleepNet(nn.Module):
             self.classifiers.append(
                 nn.Sequential(
                     nn.Linear(1024, 512),
-                    nn.LeakyReLU(0.1), nn.Dropout(dropout),
+                    nn.ReLU(), nn.Dropout(dropout),
                     nn.Linear(512, 5)
                 )
             )
