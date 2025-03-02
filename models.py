@@ -38,8 +38,8 @@ class MultiScaleCNN(nn.Module):
         batch_size, seq_length, num_channels, series = X.shape
         X = X.view(batch_size * seq_length, num_channels, series)
         X = self.block0(X)
-        X = self.block3(self.block1(X) + self.block2(X))
-        return X
+        output = self.block3(self.block1(X) + self.block2(X))
+        return output
 
 
 class CNNencoders(nn.Module):
