@@ -36,8 +36,8 @@ parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='
 parser.add_argument('--min_epoch', type=float, nargs='?', default=15, help='min epochs for model saving')
 '''generative replay settings'''
 parser.add_argument('--num_epochs_generator', type=int, nargs='?', default=100, help='number of epochs for generator')
-parser.add_argument('--lr_seq_gen', type=float, nargs='?', default=1e-4, help='learning rate for sequential generator')
-parser.add_argument('--beta', type=float, nargs='?', default=0.1, help='coefficient of kl loss')
+parser.add_argument('--lr_seq_gen', type=float, nargs='?', default=2e-4, help='learning rate for sequential generator')
+parser.add_argument('--beta', type=float, nargs='?', default=0.06, help='coefficient of kl loss')
 parser.add_argument('--tau', type=float, nargs='?', default=1.5, help='temperature for knowledge distillation')
 parser.add_argument('--gamma', type=float, nargs='?', default=1e-2, help='updating rate for running loss')
 '''lwf settings'''
@@ -46,6 +46,9 @@ parser.add_argument('--enable_multihead', action='store_true', help='whether ena
 parser.add_argument('--ewc_lambda', type=float, nargs='?', default=1e3, help='coefficient for ewc penalty')
 parser.add_argument('--ewc_gamma', type=float, nargs='?', default=0.4, help='updating rate for FIM')
 parser.add_argument('--ewc_batches', type=int, nargs='?', default=256, help='number of batches for calculating FIM')
+'''der settings'''
+parser.add_argument('--der_alpha', type=float, nargs='?', default=0.5, help='dark experience alpha')
+parser.add_argument('--der_beta', type=float, nargs='?', default=0.5, help='dark experience beta')
 '''data augmentation settings'''
 parser.add_argument('--time_reverse_rate', type=float, nargs='?', default=0.05, help='frequency for time reversion')
 '''other settings'''

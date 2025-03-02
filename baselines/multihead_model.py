@@ -11,11 +11,11 @@ class MultiHeadSleepNet(nn.Module):
         self.enable_multihead = enable_multihead
         self.cnn = CNNencoders(input_channels, dropout)
         self.short_term_encoder = ShortTermEncoder(128, 8, 4, dropout)
-        self.long_term_encoder = LongTermEncoder(512, 8, 2, dropout)
+        self.long_term_encoder = LongTermEncoder(512, 8, 4, dropout)
         self.resblock = nn.Sequential(
-            nn.Linear(512, 768),
+            nn.Linear(512, 1024),
             nn.LeakyReLU(0.1), nn.Dropout(dropout),
-            nn.Linear(768, 512),
+            nn.Linear(1024, 512),
             nn.LeakyReLU(0.1), nn.LayerNorm(512)
         )
         self.classifiers = nn.ModuleList()
@@ -77,6 +77,7 @@ class MultiHeadSleepNet(nn.Module):
 
 
 if __name__ == '__main__':
-    net = MultiHeadSleepNet(2, 0.15, 4, True)
+    net = MultiHeadSleepNet(2, 0.15, 4, False)
     for name, module in net.named_modules():
         print(name)
+    torch.save(net.state_dict(), 'multihead_model.pth')

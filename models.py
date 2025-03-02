@@ -90,7 +90,7 @@ class ShortTermEncoder(nn.Module):
         self.keep = keep
         self.positional_encoding = PositionalEncoding(embeddings)
         self.transformers = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            nn.TransformerEncoderLayer(embeddings, heads, dim_feedforward=1024, dropout=dropout, batch_first=True),
             num_layers=layers
         )
 
@@ -111,7 +111,7 @@ class LongTermEncoder(nn.Module):
         self.dropout = dropout
         self.positional_encoding = PositionalEncoding(embeddings)
         self.transformers = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            nn.TransformerEncoderLayer(embeddings, heads, dim_feedforward=1024, dropout=dropout, batch_first=True),
             num_layers=layers
         )
 
@@ -130,11 +130,11 @@ class SleepNet(nn.Module):
         self.dropout = dropout
         self.cnn = CNNencoders(input_channels, dropout)
         self.short_term_encoder = ShortTermEncoder(128, 8, 4, dropout)
-        self.long_term_encoder = LongTermEncoder(512, 8, 2, dropout)
+        self.long_term_encoder = LongTermEncoder(512, 8, 4, dropout)
         self.resblock = nn.Sequential(
-            nn.Linear(512, 768),
+            nn.Linear(512, 1024),
             nn.LeakyReLU(0.1), nn.Dropout(dropout),
-            nn.Linear(768, 512),
+            nn.Linear(1024, 512),
             nn.LeakyReLU(0.1), nn.LayerNorm(512)
         )
         self.classifier = nn.Sequential(

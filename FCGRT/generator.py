@@ -32,12 +32,12 @@ class SequentialVAEencoder(nn.Module):
         self.task2vec = nn.Embedding(max_task_num, embeddings)
         self.positional_encoding = PositionalEncoding(embeddings)
         self.block1 = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True, dim_feedforward=1024),
             num_layers=layers
         )
         self.label2vec = nn.Embedding(5, embeddings)
         self.block2 = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True, dim_feedforward=1024),
             num_layers=layers
         )
         self.mean = nn.Sequential(
@@ -80,12 +80,12 @@ class SequentialVAEdecoder(nn.Module):
         self.task2vec = nn.Embedding(max_task_num, embeddings)
         self.positional_encoding = PositionalEncoding(embeddings)
         self.block1 = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True, dim_feedforward=1024),
             num_layers=layers
         )
         self.label2vec = nn.Embedding(5, embeddings)
         self.block2 = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True),
+            nn.TransformerEncoderLayer(embeddings, heads, dropout=dropout, batch_first=True, dim_feedforward=1024),
             num_layers=layers
         )
 
@@ -116,7 +116,7 @@ class SequentialVAE(nn.Module):
     def __init__(self, embeddings, dropout, **kwargs):
         super(SequentialVAE, self).__init__(**kwargs)
         self.embeddings = embeddings
-        self.hiddens = int(embeddings * 1.5)
+        self.hiddens = int(embeddings * 2)
         self.dropout = dropout
         self.encoder = SequentialVAEencoder(embeddings, self.hiddens, 8, 2, dropout)
         self.decoder = SequentialVAEdecoder(embeddings, 8, 2, dropout)
@@ -137,3 +137,4 @@ if __name__ == '__main__':
     net = SequentialVAE(512, 0)
     X_hat, kl_loss = net(X, y, t)
     print(X_hat.shape, kl_loss)
+    torch.save(net.state_dict(), 'EEGVAE.pth')
