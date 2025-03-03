@@ -94,8 +94,11 @@ class ShortTermEncoder(nn.Module):
             nn.TransformerEncoderLayer(embeddings, heads, dim_feedforward=1024, dropout=dropout, batch_first=True),
             num_layers=layers
         )
+        self.CLS_tokens = nn.Parameter(torch.randn((1, keep, embeddings), dtype=torch.float32, requires_grad=True))
 
     def forward(self, X):
+        batch_size, seq_length, features = X.shape
+        X = torch.cat((self.CLS_tokens.expand(batch_size, self.keep, self.embeddings), X), dim=1)
         X = self.positional_encoding(X)
         X = self.transformers(X)
         X = X[:, :self.keep, :]

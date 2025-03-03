@@ -50,7 +50,7 @@ parser.add_argument('--ewc_batches', type=int, nargs='?', default=256, help='num
 parser.add_argument('--der_alpha', type=float, nargs='?', default=0.5, help='dark experience alpha')
 parser.add_argument('--der_beta', type=float, nargs='?', default=0.5, help='dark experience beta')
 '''data augmentation settings'''
-parser.add_argument('--time_reverse_rate', type=float, nargs='?', default=0.05, help='frequency for time reversion')
+parser.add_argument('--time_reverse_rate', type=float, nargs='?', default=0, help='frequency for time reversion')
 '''other settings'''
 parser.add_argument('--replay_buffer', type=float, nargs='?', default=128, help='replay buffer size for each task')
 parser.add_argument('--joint_training', action='store_true', help='start joint training')
