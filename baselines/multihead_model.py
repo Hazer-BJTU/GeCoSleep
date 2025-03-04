@@ -11,7 +11,7 @@ class MultiHeadSleepNet(nn.Module):
         self.enable_multihead = enable_multihead
         self.cnn = CNNencoders(input_channels, dropout)
         self.short_term_encoder = ShortTermEncoder(128, 8, 4, dropout)
-        self.long_term_encoder = LongTermEncoder(512, 8, 4, dropout)
+        self.long_term_encoder = LongTermEncoder(512, 8, 2, dropout)
         self.resblock = nn.Sequential(
             nn.Linear(512, 1024),
             nn.ReLU(), nn.Dropout(dropout),
