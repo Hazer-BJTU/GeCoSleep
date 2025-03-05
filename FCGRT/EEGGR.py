@@ -31,6 +31,7 @@ class EEGGRnetwork(CLnetwork):
         self.seq_gen_memory = []
         '''statistics settings'''
         self.running_task_loss = None
+        self.distill_loss, self.replay_loss = 0, 0
 
     def start_task(self):
         super(EEGGRnetwork, self).start_task()
@@ -64,6 +65,8 @@ class EEGGRnetwork(CLnetwork):
         self.seq_gen.train()
         self.teacher_model.eval()
         self.teacher_seq_gen.eval()
+        '''statistics settings'''
+        self.distill_loss, self.replay_loss = 0, 0
 
     def update_running_task_loss(self, L, t, batch_size):
         delta = torch.zeros_like(self.running_task_loss)
@@ -88,6 +91,7 @@ class EEGGRnetwork(CLnetwork):
             y_hat = self.net(X, self.task)
             L_current = self.loss(y_hat, y.view(-1))
             L = torch.mean(L_current)
+            self.train_loss += L.item()
             if self.task > 0:
                 '''perform generative replay'''
                 weights = self.running_task_loss.softmax(dim=0)
@@ -97,15 +101,16 @@ class EEGGRnetwork(CLnetwork):
                 y_pred = self.net.classify(F_fake, self.task)
                 L_replay = torch.sum(self.kldloss(nn.functional.log_softmax(y_pred / self.args.tau, dim=1), y_fake.softmax(dim=1)), dim=1)
                 L = L + torch.mean(L_replay)
+                self.replay_loss += torch.mean(L_replay).item()
                 '''distillation for sample feature extractor'''
                 y_distill = self.teacher_model(X, self.task - 1).detach() / self.args.tau
                 L_distill = torch.sum(self.kldloss(nn.functional.log_softmax(y_hat / self.args.tau, dim=1), y_distill.softmax(dim=1)), dim=1)
-                L = L + torch.mean(L_distill)
+                L = L + torch.mean(L_distill) * self.args.alpha
+                self.distill_loss += torch.mean(L_distill).item() * self.args.alpha
                 '''update running task loss'''
                 self.update_running_task_loss(L_replay, t, y.shape[0])
             L.backward()
             self.optimizer.step()
-            self.train_loss += L.item()
             self.confusion_matrix.count_task_separated(y_hat, y, 0)
         else:
             if not self.start_training_generator:
@@ -160,10 +165,16 @@ class EEGGRnetwork(CLnetwork):
             learning_rate = self.optimizer.state_dict()['param_groups'][0]['lr']
             train_acc, train_mf1 = self.confusion_matrix.accuracy(), self.confusion_matrix.macro_f1()
             print(
-                f'epoch: {self.epoch}, train loss: {self.train_loss / self.cnt:.3f}, train accuracy: {train_acc:.3f}, '
+                f'epoch: {self.epoch}, '
+                f'train loss: {self.train_loss / self.cnt:.3f}, '
+                f'distill loss: {self.distill_loss / self.cnt:.3f}, '
+                f'replay loss: {self.replay_loss / self.cnt:.3f}, '
+                f'train accuracy: {train_acc:.3f}, '
                 f"macro F1: {train_mf1:.3f}, 1000 lr: {learning_rate * 1000:.3f}")
             self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch}'], {
                 'train loss': self.train_loss / self.cnt,
+                'distill loss': self.distill_loss / self.cnt,
+                'replay loss': self.replay_loss / self.cnt,
                 'train accuracy': train_acc,
                 'train mF1': train_mf1,
                 '1000 lr': learning_rate * 1000

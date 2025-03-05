@@ -17,8 +17,7 @@ class DERnetwork(ExperienceReplay):
         super(DERnetwork, self).start_task()
         '''load teacher model'''
         if self.task > 0:
-            self.teacher_model.load_state_dict(
-                torch.load(self.best_net_memory[-1], map_location=self.device, weights_only=True))
+            self.teacher_model.load_state_dict(torch.load(self.best_net_memory[-1], map_location=self.device, weights_only=True))
             print(f'teacher model loaded: {self.best_net_memory[-1]}')
 
     def start_epoch(self):
