@@ -100,13 +100,13 @@ class EEGGRnetwork(CLnetwork):
                 y_fake = self.teacher_model.classify(F_fake, self.task - 1).detach() / self.args.tau
                 y_pred = self.net.classify(F_fake, self.task)
                 L_replay = torch.sum(self.kldloss(nn.functional.log_softmax(y_pred / self.args.tau, dim=1), y_fake.softmax(dim=1)), dim=1)
-                L = L + torch.mean(L_replay)
-                self.replay_loss += torch.mean(L_replay).item()
+                L = L + torch.mean(L_replay) * self.args.alpha
+                self.replay_loss += torch.mean(L_replay).item() * self.args.alpha
                 '''distillation for sample feature extractor'''
                 y_distill = self.teacher_model(X, self.task - 1).detach() / self.args.tau
                 L_distill = torch.sum(self.kldloss(nn.functional.log_softmax(y_hat / self.args.tau, dim=1), y_distill.softmax(dim=1)), dim=1)
-                L = L + torch.mean(L_distill) * self.args.alpha
-                self.distill_loss += torch.mean(L_distill).item() * self.args.alpha
+                L = L + torch.mean(L_distill)
+                self.distill_loss += torch.mean(L_distill).item()
                 '''update running task loss'''
                 self.update_running_task_loss(L_replay, t, y.shape[0])
             L.backward()
@@ -157,7 +157,7 @@ class EEGGRnetwork(CLnetwork):
             self.optim_seq_gen.step()
             self.rec_loss += L_rec.item()
             self.task_loss += L_task.item()
-            self.kl_loss += L_kl.item()
+            self.kl_loss += L_kl.item() * self.args.beta
         self.cnt += 1
 
     def end_epoch(self, valid_dataset):
