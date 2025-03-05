@@ -44,7 +44,7 @@ class CLnetwork:
         self.best_train_loss, self.best_train_acc, self.best_valid_acc = 0.0, 0.0, 0.0
         self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(
-            self.optimizer, lr_lambda=linear_warmup_cosine_annealing(self.args.num_epochs)
+            self.optimizer, lr_lambda=linear_warmup_cosine_annealing(self.args.num_epochs, self.args.min_epoch)
         )
 
     def start_epoch(self):
@@ -130,7 +130,7 @@ class Independent(CLnetwork):
         self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(
             self.optimizer,
-            lr_lambda=linear_warmup_cosine_annealing(self.args.num_epochs)
+            lr_lambda=linear_warmup_cosine_annealing(self.args.num_epochs, self.args.min_epoch)
         )
 
 

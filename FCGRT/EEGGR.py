@@ -40,12 +40,12 @@ class EEGGRnetwork(CLnetwork):
         self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(
             self.optimizer,
-            lr_lambda=linear_warmup_cosine_annealing(self.num_epochs_solver)
+            lr_lambda=linear_warmup_cosine_annealing(self.num_epochs_solver, self.args.min_epoch)
         )
         self.optim_seq_gen = torch.optim.Adam(self.seq_gen.parameters(), lr=self.args.lr_seq_gen)
         self.sched_seq_gen = torch.optim.lr_scheduler.LambdaLR(
             self.optim_seq_gen,
-            lr_lambda=linear_warmup_cosine_annealing(self.args.num_epochs_generator)
+            lr_lambda=linear_warmup_cosine_annealing(self.args.num_epochs_generator, self.args.min_epoch)
         )
         '''replay settings'''
         if self.task > 0:

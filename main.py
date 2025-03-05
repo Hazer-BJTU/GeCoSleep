@@ -33,7 +33,7 @@ parser.add_argument('--dropout', type=float, nargs='?', default=0.1, help='drop 
 parser.add_argument('--weight_decay', type=float, nargs='?', default=1e-5, help='weight decay value')
 parser.add_argument('--lr', type=float, nargs='?', default=1e-4, help='learning rate')
 parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='continual learning strategy')
-parser.add_argument('--min_epoch', type=float, nargs='?', default=15, help='min epochs for model saving')
+parser.add_argument('--min_epoch', type=float, nargs='?', default=10, help='min epochs for model saving')
 '''generative replay settings'''
 parser.add_argument('--num_epochs_generator', type=int, nargs='?', default=100, help='number of epochs for generator')
 parser.add_argument('--lr_seq_gen', type=float, nargs='?', default=1e-4, help='learning rate for sequential generator')
