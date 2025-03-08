@@ -35,14 +35,14 @@ class DERnetwork(ExperienceReplay):
         L_current = self.loss(y_hat, y.view(-1))
         L = torch.mean(L_current)
         if self.task > 0:
-            selected = random.sample(list(range(self.sample_buffer.shape[0])), self.args.batch_size)
+            selected = random.sample(list(range(self.replay_buffer_size)), self.args.batch_size)
             Xr, yr = self.sample_buffer[selected], self.label_buffer[selected]
             Xr, yr = Xr.to(self.device), yr.to(self.device)
-            yr_distill = self.teacher_model(Xr).detach()
-            yr_hat = self.net(Xr)
-            L_kl = torch.sum(self.kldloss(nn.functional.log_softmax(y_hat, dim=1), yr_distill.softmax(dim=1)), dim=1)
+            yr_distill = self.teacher_model(Xr).detach() / self.args.tau
+            yr_hat = self.net(Xr) / self.args.tau
+            L_kl = torch.sum(self.kldloss(nn.functional.log_softmax(yr_hat, dim=1), yr_distill.softmax(dim=1)), dim=1)
             L_ed = self.mseloss(yr_hat, yr_distill)
-            L = L + self.args.der_alpha * L_kl + self.args.der_beta * L_ed
+            L = L + self.args.der_alpha * torch.mean(L_kl) + self.args.der_beta * L_ed
         L.backward()
         self.optimizer.step()
         self.train_loss += L.item()

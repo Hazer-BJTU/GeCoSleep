@@ -137,32 +137,47 @@ class Independent(CLnetwork):
 class ExperienceReplay(CLnetwork):
     def __init__(self, args, fold_num, logs):
         super(ExperienceReplay, self).__init__(args, fold_num, logs)
-        self.replay_buffer = 0
-        self.sample_buffer = None
-        self.label_buffer = None
+        self.replay_buffer_size = 0
+        self.observed_samples = 0
+        '''replay buffer settings'''
+        self.sample_buffer = torch.zeros(
+            (args.replay_buffer, args.window_size, self.num_channels, 3000),
+            dtype=torch.float32,
+            requires_grad=False,
+            device=self.device
+        )
+        self.label_buffer = torch.zeros(
+            (args.replay_buffer, args.window_size),
+            dtype=torch.int64,
+            requires_grad=False,
+            device=self.device
+        )
+        self.task_tag = torch.zeros(
+            args.replay_buffer,
+            dtype=torch.int64,
+            requires_grad=False
+        )
 
     def start_task(self):
         super(ExperienceReplay, self).start_task()
-        self.replay_buffer += self.args.replay_buffer
 
     def update_buffer(self, X, y):
-        if self.sample_buffer is None or self.label_buffer is None:
-            if X.shape[0] >= self.replay_buffer:
-                self.sample_buffer = X[:self.replay_buffer, :, :, :]
-                self.label_buffer = y[:self.replay_buffer, :]
-            else:
-                self.sample_buffer = X
-                self.label_buffer = y
-        else:
-            remaining = self.replay_buffer - self.sample_buffer.shape[0]
-            if remaining == 0:
-                return
-            if X.shape[0] >= remaining:
-                self.sample_buffer = torch.cat((self.sample_buffer, X[:remaining, :, :, :]), dim=0)
-                self.label_buffer = torch.cat((self.label_buffer, y[:remaining, :]), dim=0)
-            else:
-                self.sample_buffer = torch.cat((self.sample_buffer, X), dim=0)
-                self.label_buffer = torch.cat((self.label_buffer, y), dim=0)
+        self.sample_buffer, self.label_buffer = self.sample_buffer.to(X.device), self.label_buffer.to(y.device)
+        for idx in range(X.shape[0]):
+            if self.replay_buffer_size < self.args.replay_buffer:
+                self.sample_buffer[self.replay_buffer_size].copy_(X[idx])
+                self.label_buffer[self.replay_buffer_size].copy_(y[idx])
+                self.task_tag[self.replay_buffer_size] = self.task + 1
+                self.replay_buffer_size += 1
+            elif random.randint(1, self.observed_samples) <= self.args.replay_buffer:
+                replace_idx = random.randint(0, self.args.replay_buffer - 1)
+                self.sample_buffer[replace_idx].copy_(X[idx])
+                self.label_buffer[replace_idx].copy_(y[idx])
+                self.task_tag[replace_idx] = self.task + 1
+            self.observed_samples += 1
+
+    def start_epoch(self):
+        super(ExperienceReplay, self).start_epoch()
 
     def observe(self, X, y, first_time=False):
         if first_time:
@@ -175,7 +190,7 @@ class ExperienceReplay(CLnetwork):
         L_current = self.loss(y_hat, y.view(-1))
         L = torch.mean(L_current)
         if self.task > 0:
-            selected = random.sample(list(range(self.sample_buffer.shape[0])), self.args.batch_size)
+            selected = random.sample(list(range(self.replay_buffer_size)), self.args.batch_size)
             Xr, yr = self.sample_buffer[selected], self.label_buffer[selected]
             Xr, yr = Xr.to(self.device), yr.to(self.device)
             yr_hat = self.net(Xr)
@@ -189,8 +204,14 @@ class ExperienceReplay(CLnetwork):
 
     def end_epoch(self, valid_dataset):
         super(ExperienceReplay, self).end_epoch(valid_dataset)
+        distribution = torch.bincount(self.task_tag).cpu().numpy().tolist()
         self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch - 1}',
-                          'replay buffer size'], self.sample_buffer.shape[0])
+                          'replay buffer size'], self.replay_buffer_size)
+        self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch - 1}',
+                          'replay buffer distribution'], distribution)
+
+    def end_task(self, dataset=None):
+        super(ExperienceReplay, self).end_task(dataset)
 
 
 if __name__ == '__main__':

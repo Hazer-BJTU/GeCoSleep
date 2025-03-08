@@ -6,6 +6,7 @@ from FCGRT.EEGGR import *
 from baselines.LwF import *
 from baselines.multihead_model import *
 from baselines.EWC import *
+from baselines.DER import *
 from data_preprocessing import *
 from logs import *
 
@@ -38,6 +39,8 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
         clnetwork = LwFnetwork(args, fold_idx, logs)
     elif args.replay_mode == 'ewc':
         clnetwork = EWCnetwork(args, fold_idx, logs)
+    elif args.replay_mode == 'der':
+        clnetwork = DERnetwork(args, fold_idx, logs)
     confusion = ConfusionMatrix(args.task_num)
     print('start first testing...')
     if args.replay_mode == 'packnet':
