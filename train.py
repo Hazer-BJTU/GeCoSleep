@@ -2,11 +2,8 @@ import sys
 import random
 import numpy as np
 from clnetworks import *
-from FCGRT.EEGGR import *
-from baselines.LwF import *
-from baselines.multihead_model import *
-from baselines.EWC import *
-from baselines.DER import *
+from FCGRT import *
+from baselines import *
 from data_preprocessing import *
 from logs import *
 

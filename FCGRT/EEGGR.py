@@ -1,7 +1,7 @@
 import torch.nn
 from models import *
 from . import generator
-from baselines.multihead_model import *
+from baselines import MultiHeadSleepNet
 from clnetworks import CLnetwork, linear_warmup_cosine_annealing
 from metric import ConfusionMatrix, evaluate_tasks_multihead
 
