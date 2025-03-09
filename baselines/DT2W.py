@@ -1,6 +1,7 @@
 import torch
 from models import *
 from clnetworks import CLnetwork
+from metric import ConfusionMatrix, evaluate_tasks
 
 
 def batched_soft_dtw_loss_4_short_seq(seriesX, seriesY, gamma=0.1, eps=1e-5):
@@ -23,21 +24,108 @@ def batched_soft_dtw_loss_4_short_seq(seriesX, seriesY, gamma=0.1, eps=1e-5):
     return R[-1, -1, :]
 
 
+class DTWSleepNet(SleepNet):
+    def __init__(self, input_channels, dropout, **kwargs):
+        super(DTWSleepNet, self).__init__(input_channels, dropout, **kwargs)
+
+    def forward(self, X, with_features=False):
+        batch_size, seq_length, num_channels, series = X.shape
+        X = self.cnn(X)
+        X = self.short_term_encoder(X)
+        X = X.view(batch_size, seq_length, -1)
+        r = self.resblock(X.view(batch_size * seq_length, -1))
+        F1 = self.long_term_encoder(X)
+        F2 = torch.cat((r, F1), dim=1)
+        output = self.classifier(F2)
+        if with_features:
+            return output, F1.view(batch_size, seq_length, -1), F2
+        else:
+            return output
+
+
 class DTWnetwork(CLnetwork):
     def __init__(self, args, fold_num, logs):
         super(DTWnetwork, self).__init__(args, fold_num, logs)
+        self.net = DTWSleepNet(self.num_channels, args.dropout)
+        self.net.apply(init_weight)
+        self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        self.net.to(self.device)
+        self.kldloss = nn.KLDivLoss(reduction='none')
+        '''distill settings'''
+        self.teacher_model = DTWSleepNet(self.num_channels, args.dropout)
+        self.teacher_model.to(self.device)
+        self.dtw_loss, self.distill_loss = 0, 0
 
     def start_task(self):
         super(DTWnetwork, self).start_task()
+        '''load teacher models'''
+        if self.task > 0:
+            self.teacher_model.load_state_dict(torch.load(self.best_net_memory[-1], map_location=self.device, weights_only=True))
+            print(f'teacher model loaded: {self.best_net_memory[-1]}')
 
     def start_epoch(self):
         super(DTWnetwork, self).start_epoch()
+        self.dtw_loss, self.distill_loss = 0, 0
+        self.teacher_model.eval()
 
     def observe(self, X, y, first_time=False):
-        pass
+        X, y = X.to(self.device), y.to(self.device)
+        self.optimizer.zero_grad()
+        y_hat, F1, F2 = self.net(X, True)
+        L_current = self.loss(y_hat, y.view(-1))
+        L = torch.mean(L_current)
+        self.train_loss += L.item()
+        if self.task > 0:
+            '''perform knowledge distillation'''
+            y_distill, F_distill, _ = self.teacher_model(X, True)
+            y_distill, F_distill = y_distill.detach() / self.args.tau, F_distill.detach()
+            L_distill = torch.sum(self.kldloss(nn.functional.log_softmax(y_hat / self.args.tau, dim=1), y_distill.softmax(dim=1)), dim=1)
+            L_dtw = batched_soft_dtw_loss_4_short_seq(F1, F_distill)
+            L = L + torch.mean(L_distill) + torch.mean(L_dtw) * self.args.dtw_lambda
+            self.distill_loss += torch.mean(L_distill).item()
+            self.dtw_loss += torch.mean(L_dtw).item() * self.args.dtw_lambda
+        L.backward()
+        self.optimizer.step()
+        self.cnt += 1
+        self.confusion_matrix.count_task_separated(y_hat, y, 0)
 
     def end_epoch(self, valid_dataset):
-        super(DTWnetwork, self).end_epoch(valid_dataset)
+        learning_rate = self.optimizer.state_dict()['param_groups'][0]['lr']
+        train_acc, train_mf1 = self.confusion_matrix.accuracy(), self.confusion_matrix.macro_f1()
+        print(f'epoch: {self.epoch}, '
+              f'train loss: {self.train_loss / self.cnt:.3f}, '
+              f'distill loss: {self.distill_loss / self.cnt:.3f}, '
+              f'dtw loss: {self.dtw_loss / self.cnt:.3f}, '
+              f'train accuracy: {train_acc:.3f}, '
+              f"macro F1: {train_mf1:.3f}, 1000 lr: {learning_rate * 1000:.3f}")
+        self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch}'], {
+            'train loss': self.train_loss / self.cnt,
+            'distill loss': self.distill_loss / self.cnt,
+            'dtw loss': self.dtw_loss / self.cnt,
+            'train accuracy': train_acc,
+            'train mF1': train_mf1,
+            '1000 lr': learning_rate * 1000
+        })
+        if (self.epoch + 1) % self.args.valid_epoch == 0:
+            print(f'validating on the datasets...')
+            valid_confusion = ConfusionMatrix(1)
+            valid_confusion = evaluate_tasks(self.net, [valid_dataset], valid_confusion, self.device, self.args.valid_batch)
+            valid_acc, valid_mf1 = valid_confusion.accuracy(), valid_confusion.macro_f1()
+            print(f'valid accuracy: {valid_acc:.3f}, valid macro F1: {valid_mf1:.3f}')
+            self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'valid epoch:{self.epoch}'], {
+                'valid accuracy': valid_acc,
+                'valid mF1': valid_mf1
+            })
+            if valid_acc + valid_mf1 > self.best_valid_acc and self.epoch + 1 >= self.args.min_epoch:
+                self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'valid epoch:{self.epoch}', 'saved'], True)
+                self.best_train_loss = self.train_loss / self.cnt
+                self.best_train_acc = train_acc
+                self.best_valid_acc = valid_acc + valid_mf1
+                self.best_net = './modelsaved/' + str(self.args.replay_mode) + '_task' + str(self.task) + '_fold' + str(self.fold_num) + '.pth'
+                print(f'model saved: {self.best_net}')
+                torch.save(self.net.state_dict(), self.best_net)
+        self.epoch += 1
+        self.scheduler.step()
 
     def end_task(self, dataset=None):
         super(DTWnetwork, self).end_task(dataset)
