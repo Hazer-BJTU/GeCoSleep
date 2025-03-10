@@ -52,7 +52,7 @@ parser.add_argument('--der_beta', type=float, nargs='?', default=0.5, help='dark
 '''dt2w settings'''
 parser.add_argument('--dtw_lambda', type=float, nargs='?', default=0.03, help='coefficient for dtw loss')
 '''data augmentation settings'''
-parser.add_argument('--time_reverse_rate', type=float, nargs='?', default=0.1, help='frequency for time reversion')
+parser.add_argument('--time_reverse_rate', type=float, nargs='?', default=0.05, help='frequency for time reversion')
 '''other settings'''
 parser.add_argument('--enable_multihead', action='store_true', help='whether enable multihead')
 parser.add_argument('--replay_buffer', type=float, nargs='?', default=384, help='replay buffer size')

@@ -86,12 +86,13 @@ class DTWnetwork(CLnetwork):
         mus = mu[mini_batch]
         eps = torch.randn_like(mus)
         F_prot = mus + self.radius[mini_batch] * eps
-        y_prot = torch.tensor(mini_batch, dtype=torch.int64, requires_grad=False, device=self.device)
-        return F_prot, y_prot
+        return F_prot, mini_batch
 
     def observe(self, X, y, first_time=False):
         X, y = X.to(self.device), y.to(self.device)
         self.optimizer.zero_grad()
+        if self.task > 0:
+            self.net.freeze_parameters()
         y_hat, F1, F2 = self.net(X, True)
         L_current = self.loss(y_hat, y.view(-1))
         L = torch.mean(L_current)
