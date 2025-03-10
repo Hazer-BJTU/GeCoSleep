@@ -62,7 +62,7 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
                 else:
                     clnetwork.observe(X, y, False)
             clnetwork.end_epoch(valids[task_idx])
-        if args.replay_mode == 'ewc':
+        if args.replay_mode == 'ewc' or args.replay_mode == 'dtw':
             clnetwork.end_task(trains[task_idx])
         else:
             clnetwork.end_task()
