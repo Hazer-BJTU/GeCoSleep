@@ -9,6 +9,7 @@ class LogDocument:
         self.args = args
         self.assignment_idx = None
         self.file_path = None
+        self.dir_path = None
         while True:
             if self.try_assign_filename():
                 break
@@ -29,7 +30,8 @@ class LogDocument:
         else:
             self.file_path = (str(self.args.replay_mode) + f'_experiment{self.assignment_idx}_' +
                               datetime.now().strftime("%Y-%m-%d") + '.json')
-        return not os.path.exists(os.path.join('results', self.file_path))
+        self.dir_path = self.file_path[:-5]
+        return not os.path.exists(os.path.join('results', self.dir_path))
 
     def append(self, fields, content):
         pointer = self.all_information
@@ -49,8 +51,21 @@ class LogDocument:
 
     def write(self):
         self.all_information['log_ending_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(os.path.join('results', self.file_path), 'w', encoding='utf-8') as file:
+        prefix = os.path.join('results', self.dir_path)
+        if not os.path.exists(prefix):
+            os.system(f'mkdir -p {prefix}')
+        with open(os.path.join(prefix, self.file_path), 'w', encoding='utf-8') as file:
             json.dump(self.all_information, file, indent=4)
+
+    def save_params(self):
+        prefix = os.path.join('results', self.dir_path)
+        print('packaging models...')
+        os.system(
+            f'find modelsaved -type f -name "*.pth" -print0 | '
+            f"tar --null -czvf {os.path.join(prefix, 'params.tar.gz')} --files-from -"
+        )
+        os.system(f'rm -f ./modelsaved/*.pth')
+        print('all operations complete')
 
 
 if __name__ == '__main__':

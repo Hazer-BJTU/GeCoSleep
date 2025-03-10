@@ -63,3 +63,4 @@ if __name__ == '__main__':
     R, exp_log = train_k_fold(args)
     write_format(R, args, 'cl_output_record_' + args.replay_mode + '.txt', exp_log)
     exp_log.write()
+    exp_log.save_params()
