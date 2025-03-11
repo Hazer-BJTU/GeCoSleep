@@ -122,3 +122,6 @@ class TAGEMnetwork(CLnetwork):
         feats = [s[2] for s in assigned_cluster['samples']]
         assigned_cluster['center'] = torch.stack(feats, dim=0).mean(dim=0)
 
+
+if __name__ == '__main__':
+    pass
