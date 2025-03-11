@@ -29,7 +29,7 @@ parser.add_argument('--num_epochs', type=int, nargs='?', default=200, help='numb
 parser.add_argument('--batch_size', type=int, nargs='?', default=32, help='batch size')
 parser.add_argument('--valid_epoch', type=int, nargs='?', default=5, help='validating interval')
 parser.add_argument('--valid_batch', type=int, nargs='?', default=32, help='validating batch size')
-parser.add_argument('--dropout', type=float, nargs='?', default=0.1, help='drop out ratio')
+parser.add_argument('--dropout', type=float, nargs='?', default=0.05, help='drop out ratio')
 parser.add_argument('--weight_decay', type=float, nargs='?', default=1e-4, help='weight decay value')
 parser.add_argument('--lr', type=float, nargs='?', default=1e-4, help='learning rate')
 parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='continual learning strategy')
@@ -51,6 +51,8 @@ parser.add_argument('--der_alpha', type=float, nargs='?', default=0.5, help='dar
 parser.add_argument('--der_beta', type=float, nargs='?', default=0.5, help='dark experience beta')
 '''dt2w settings'''
 parser.add_argument('--dtw_lambda', type=float, nargs='?', default=0.03, help='coefficient for dtw loss')
+'''ta_gem settings'''
+parser.add_argument('--num_clusters', type=int, nargs='?', default=4, help='num clusters for ta_gem')
 '''data augmentation settings'''
 parser.add_argument('--time_reverse_rate', type=float, nargs='?', default=0.05, help='frequency for time reversion')
 '''other settings'''
