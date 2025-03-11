@@ -5,12 +5,14 @@ import random
 from clnetworks import CLnetwork
 from metric import ConfusionMatrix, evaluate_tasks
 
+
 def get_flat_grad(model):
     grads = []
     for param in model.parameters():
         if param.grad is not None:
             grads.append(param.grad.view(-1))
     return torch.cat(grads) if len(grads) > 0 else None
+
 
 def set_flat_grad(model, flat_grad):
     pointer = 0
@@ -20,19 +22,20 @@ def set_flat_grad(model, flat_grad):
             param.grad.copy_(flat_grad[pointer:pointer + num_param].view(param.size()))
             pointer += num_param
 
-class TA_GEMnetwork(CLnetwork):
+
+class TAGEMnetwork(CLnetwork):
     def __init__(self, args, fold_num, logs):
-        super(TA_GEMnetwork, self).__init__(args, fold_num, logs)
+        super(TAGEMnetwork, self).__init__(args, fold_num, logs)
         self.memory_clusters = []
         self.num_clusters = self.args.num_clusters
         self.cluster_size = self.args.batch_size
         self.mem_batch = self.args.batch_size
 
     def start_task(self):
-        super(TA_GEMnetwork, self).start_task()
+        super(TAGEMnetwork, self).start_task()
 
     def start_epoch(self):
-        super(TA_GEMnetwork, self).start_epoch()
+        super(TAGEMnetwork, self).start_epoch()
     
     def observe(self, X, y, first_time=False):
         X, y = X.to(self.device), y.to(self.device)
@@ -62,7 +65,7 @@ class TA_GEMnetwork(CLnetwork):
         self.confusion_matrix.count_task_separated(y_hat, y, 0)
 
     def end_epoch(self, valid_dataset):
-        super(TA_GEMnetwork, self).end_epoch(valid_dataset)
+        super(TAGEMnetwork, self).end_epoch(valid_dataset)
 
     def end_task(self, dataset=None):
         self.task += 1
