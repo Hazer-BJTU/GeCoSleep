@@ -32,6 +32,8 @@ class LwFnetwork(CLnetwork):
     def observe(self, X, y, first_time=False):
         X, y = X.to(self.device), y.to(self.device)
         self.optimizer.zero_grad()
+        if self.task > 0 and not self.args.enable_multihead:
+            self.net.freeze_parameters()
         y_hat = self.net(X, self.task)
         L_current = self.loss(y_hat, y.view(-1))
         L = torch.mean(L_current)

@@ -62,6 +62,8 @@ class EWCnetwork(CLnetwork):
     def observe(self, X, y, first_time=False):
         X, y = X.to(self.device), y.to(self.device)
         self.optimizer.zero_grad()
+        if self.task > 0:
+            self.net.freeze_parameters()
         y_hat = self.net(X)
         L_current = self.loss(y_hat, y.view(-1))
         L = torch.mean(L_current)
