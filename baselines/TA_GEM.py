@@ -28,7 +28,7 @@ class TAGEMnetwork(CLnetwork):
         super(TAGEMnetwork, self).__init__(args, fold_num, logs)
         self.memory_clusters = []
         self.num_clusters = self.args.num_clusters
-        self.cluster_size = self.args.batch_size
+        self.cluster_size = self.args.replay_buffer // self.args.num_clusters
         self.mem_batch = self.args.batch_size
 
     def start_task(self):
