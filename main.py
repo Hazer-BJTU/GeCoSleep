@@ -44,20 +44,20 @@ parser.add_argument('--alpha', type=float, nargs='?', default=10, help='coeffici
 parser.add_argument('--gamma', type=float, nargs='?', default=1e-2, help='updating rate for running loss')
 '''ewc settings'''
 parser.add_argument('--ewc_lambda', type=float, nargs='?', default=1e3, help='coefficient for ewc penalty')
-parser.add_argument('--ewc_gamma', type=float, nargs='?', default=0.4, help='updating rate for FIM')
-parser.add_argument('--ewc_batches', type=int, nargs='?', default=256, help='number of batches for calculating FIM')
+parser.add_argument('--ewc_gamma', type=float, nargs='?', default=0.5, help='updating rate for FIM')
+parser.add_argument('--ewc_batches', type=int, nargs='?', default=512, help='number of batches for calculating FIM')
 '''der settings'''
 parser.add_argument('--der_alpha', type=float, nargs='?', default=0.5, help='dark experience alpha')
 parser.add_argument('--der_beta', type=float, nargs='?', default=0.5, help='dark experience beta')
 '''dt2w settings'''
 parser.add_argument('--dtw_lambda', type=float, nargs='?', default=0.03, help='coefficient for dtw loss')
 '''ta_gem settings'''
-parser.add_argument('--num_clusters', type=int, nargs='?', default=4, help='num clusters for ta_gem')
+parser.add_argument('--num_clusters', type=int, nargs='?', default=8, help='num clusters for ta_gem')
 '''data augmentation settings'''
 parser.add_argument('--time_reverse_rate', type=float, nargs='?', default=0.05, help='frequency for time reversion')
 '''other settings'''
 parser.add_argument('--enable_multihead', action='store_true', help='whether enable multihead')
-parser.add_argument('--replay_buffer', type=float, nargs='?', default=384, help='replay buffer size')
+parser.add_argument('--replay_buffer', type=float, nargs='?', default=512, help='replay buffer size')
 parser.add_argument('--joint_training', action='store_true', help='start joint training')
 args = parser.parse_args()
 
