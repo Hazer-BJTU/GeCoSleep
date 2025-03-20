@@ -75,12 +75,16 @@ class TAGEMnetwork(CLnetwork):
                           'cluster sizes: '], cluster_num_list)
 
     def end_task(self, dataset=None):
+        self.task += 1
+        self.best_net_memory.append(self.best_net)
+        self.net.load_state_dict(torch.load(self.best_net_memory[-1], map_location=self.device, weights_only=True))
+        print('best model loaded, start updating clusters...')
+        self.net.eval()
         loader = DataLoader(dataset, self.args.batch_size, True)
         for X, y in loader:
             X, y = X.to(self.device), y.to(self.device)
             self.update_memory(X, y)
-        self.task += 1
-        self.best_net_memory.append(self.best_net)
+        print('update complete!')
 
     def memory_available(self):
         for cluster in self.memory_clusters:
@@ -97,7 +101,7 @@ class TAGEMnetwork(CLnetwork):
                 all_labels.append(y_sample.unsqueeze(0))
         if len(all_samples) == 0:
             return torch.empty(0), torch.empty(0, dtype=torch.long)
-        indices = random.choices(range(len(all_samples)), k=batch_size)
+        indices = random.sample(list(range(len(all_samples))), batch_size)
         mem_X = torch.cat([all_samples[i] for i in indices], dim=0)
         mem_y = torch.cat([all_labels[i] for i in indices], dim=0)
         return mem_X, mem_y
