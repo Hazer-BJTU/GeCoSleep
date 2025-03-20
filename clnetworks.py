@@ -180,8 +180,6 @@ class ExperienceReplay(CLnetwork):
         super(ExperienceReplay, self).start_epoch()
 
     def observe(self, X, y, first_time=False):
-        if first_time:
-            self.update_buffer(X, y)
         X, y = X.to(self.device), y.to(self.device)
         self.optimizer.zero_grad()
         if self.task > 0:
@@ -211,6 +209,9 @@ class ExperienceReplay(CLnetwork):
                           'replay buffer distribution'], distribution)
 
     def end_task(self, dataset=None):
+        loader = DataLoader(dataset, self.args.batch_size, True)
+        for X, y in loader:
+            self.update_buffer(X, y)
         super(ExperienceReplay, self).end_task(dataset)
 
 

@@ -4,6 +4,7 @@ import torch.nn as nn
 import random
 from clnetworks import CLnetwork
 from metric import ConfusionMatrix, evaluate_tasks
+from torch.utils.data import DataLoader
 
 
 def get_flat_grad(model):
@@ -39,8 +40,9 @@ class TAGEMnetwork(CLnetwork):
     
     def observe(self, X, y, first_time=False):
         X, y = X.to(self.device), y.to(self.device)
-        self.update_memory(X, y)
         self.optimizer.zero_grad()
+        if self.task > 0:
+            self.net.freeze_parameters()
         y_hat = self.net(X)
         L_current = torch.mean(self.loss(y_hat, y.view(-1)))
         L_current.backward()
@@ -66,8 +68,17 @@ class TAGEMnetwork(CLnetwork):
 
     def end_epoch(self, valid_dataset):
         super(TAGEMnetwork, self).end_epoch(valid_dataset)
+        cluster_num_list = []
+        for cluster in self.memory_clusters:
+            cluster_num_list.append(len(cluster['samples']))
+        self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch - 1}',
+                          'cluster sizes: '], cluster_num_list)
 
     def end_task(self, dataset=None):
+        loader = DataLoader(dataset, self.args.batch_size, True)
+        for X, y in loader:
+            X, y = X.to(self.device), y.to(self.device)
+            self.update_memory(X, y)
         self.task += 1
         self.best_net_memory.append(self.best_net)
 

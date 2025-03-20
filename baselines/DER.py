@@ -25,8 +25,6 @@ class DERnetwork(ExperienceReplay):
         self.teacher_model.eval()
 
     def observe(self, X, y, first_time=False):
-        if first_time:
-            self.update_buffer(X, y)
         X, y = X.to(self.device), y.to(self.device)
         self.optimizer.zero_grad()
         if self.task > 0:
