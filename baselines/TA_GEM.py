@@ -2,7 +2,7 @@ import math
 import torch
 import torch.nn as nn
 import random
-from clnetworks import CLnetwork
+from clnetworks import CLnetwork, ExperienceReplay
 from metric import ConfusionMatrix, evaluate_tasks
 from torch.utils.data import DataLoader
 
@@ -136,6 +136,52 @@ class TAGEMnetwork(CLnetwork):
             assigned_cluster['samples'].append((sample_X, sample_y, sample_feat.clone()))
         feats = [s[2] for s in assigned_cluster['samples']]
         assigned_cluster['center'] = torch.stack(feats, dim=0).mean(dim=0)
+
+
+class AGEM(ExperienceReplay):
+    def __init__(self, args, fold_num, logs):
+        super(AGEM, self).__init__(args, fold_num, logs)
+
+    def start_task(self):
+        super(AGEM, self).start_task()
+
+    def start_epoch(self):
+        super(AGEM, self).start_epoch()
+
+    def observe(self, X, y, first_time=False):
+        X, y = X.to(self.device), y.to(self.device)
+        self.optimizer.zero_grad()
+        if self.task > 0:
+            self.net.freeze_parameters()
+        y_hat = self.net(X)
+        L_current = torch.mean(self.loss(y_hat, y.view(-1)))
+        L_current.backward()
+        g_cur = get_flat_grad(self.net)
+        if self.task > 0:
+            selected = random.sample(list(range(self.replay_buffer_size)), self.args.batch_size)
+            Xr, yr = self.sample_buffer[selected], self.label_buffer[selected]
+            Xr, yr = Xr.to(self.device), yr.to(self.device)
+            self.optimizer.zero_grad()
+            yr_hat = self.net(Xr)
+            L_replay = torch.mean(self.loss(yr_hat, yr.view(-1)))
+            L_replay.backward()
+            g_ref = get_flat_grad(self.net)
+            prod = torch.dot(g_cur, g_ref)
+            if prod < 0:
+                proj_grad = g_cur - (prod / (g_ref.norm() ** 2 + 1e-12)) * g_ref
+            else:
+                proj_grad = g_cur
+            set_flat_grad(self.net, proj_grad)
+        self.optimizer.step()
+        self.train_loss += L_current.item()
+        self.cnt += 1
+        self.confusion_matrix.count_task_separated(y_hat, y, 0)
+
+    def end_epoch(self, valid_dataset):
+        super(AGEM, self).end_epoch(valid_dataset)
+
+    def end_task(self, dataset=None):
+        super(AGEM, self).end_task(dataset)
 
 
 if __name__ == '__main__':

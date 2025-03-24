@@ -42,6 +42,8 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
         clnetwork = DTWnetwork(args, fold_idx, logs)
     elif args.replay_mode == 'tagem':
         clnetwork = TAGEMnetwork(args, fold_idx, logs)
+    elif args.replay_mode == 'agem':
+        clnetwork = AGEM(args, fold_idx, logs)
     confusion = ConfusionMatrix(args.task_num)
     print('start first testing...')
     if args.replay_mode == 'packnet':
