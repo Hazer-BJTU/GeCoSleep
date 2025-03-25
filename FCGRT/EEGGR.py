@@ -10,15 +10,24 @@ def knowledge_distillation_function(loss_type):
     kld_loss = nn.KLDivLoss(reduction='none')
     mse_loss = nn.MSELoss(reduction='none')
 
-    def kl_divergence(y_hat, y, tau):
-        return torch.sum(kld_loss(nn.functional.log_softmax(y_hat / tau, dim=1), (y / tau).softmax(dim=1)), dim=1)
+    def kl_divergence(y_hat, y, args):
+        return torch.sum(kld_loss(nn.functional.log_softmax(y_hat / args.tau, dim=1), (y / args.tau).softmax(dim=1)), dim=1)
 
-    def euclidean(y_hat, y, tau):
+    def euclidean(y_hat, y, args):
         return torch.sum(mse_loss(y_hat, y), dim=1)
+
+    def mixed(y_hat, y, args):
+        L_kl = torch.sum(kld_loss(nn.functional.log_softmax(y_hat / args.tau, dim=1), (y / args.tau).softmax(dim=1)), dim=1)
+        L_ed = torch.sum(mse_loss(y_hat, y), dim=1)
+        alpha, beta = L_kl.detach(), L_ed.detach()
+        return (L_kl * beta + L_ed * alpha) / (L_kl + L_ed + 1e-12) * args.mix_lambda
+
     if loss_type == 'kl':
         return kl_divergence
-    else:
+    elif loss_type == 'ed':
         return euclidean
+    else:
+        return mixed
 
 
 class EEGGRnetwork(CLnetwork):
@@ -114,12 +123,12 @@ class EEGGRnetwork(CLnetwork):
                 F_fake = self.teacher_seq_gen.decoder.generate(y, t).detach()
                 y_fake = self.teacher_model.classify(F_fake, self.task - 1).detach()
                 y_pred = self.net.classify(F_fake, self.task)
-                L_replay = self.kdloss(y_pred, y_fake, self.args.tau)
+                L_replay = self.kdloss(y_pred, y_fake, self.args)
                 L = L + torch.mean(L_replay) * self.args.alpha
                 self.replay_loss += torch.mean(L_replay).item() * self.args.alpha
                 '''distillation for sample feature extractor'''
                 y_distill = self.teacher_model(X, self.task - 1).detach()
-                L_distill = self.kdloss(y_hat, y_distill, self.args.tau)
+                L_distill = self.kdloss(y_hat, y_distill, self.args)
                 L = L + torch.mean(L_distill)
                 self.distill_loss += torch.mean(L_distill).item()
                 '''update running task loss'''
@@ -162,7 +171,7 @@ class EEGGRnetwork(CLnetwork):
             L_rec = self.mseloss(F_hat, F_prime)
             pred_true = self.net.classify(F_prime, self.task).detach()
             pred_fake = self.net.classify(F_hat, self.task)
-            L_task = self.kdloss(pred_fake, pred_true, self.args.tau)
+            L_task = self.kdloss(pred_fake, pred_true, self.args)
             if self.task > 0:
                 '''update running task loss'''
                 self.update_running_task_loss(L_task.detach(), t_prime, y.shape[0])

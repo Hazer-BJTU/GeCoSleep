@@ -43,6 +43,7 @@ parser.add_argument('--beta', type=float, nargs='?', default=0.1, help='coeffici
 parser.add_argument('--alpha', type=float, nargs='?', default=10, help='coefficient of replay loss')
 parser.add_argument('--gamma', type=float, nargs='?', default=1e-2, help='updating rate for running loss')
 parser.add_argument('--distill_loss', type=str, nargs='?', default='kl', help='loss function for knowledge distillation')
+parser.add_argument('--mix_lambda', type=float, nargs='?', default=0.5, help='coefficient for mixed loss')
 '''ewc settings'''
 parser.add_argument('--ewc_lambda', type=float, nargs='?', default=1e3, help='coefficient for ewc penalty')
 parser.add_argument('--ewc_gamma', type=float, nargs='?', default=0.5, help='updating rate for FIM')
