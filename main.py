@@ -41,7 +41,7 @@ parser.add_argument('--num_epochs_generator', type=int, nargs='?', default=100, 
 parser.add_argument('--lr_seq_gen', type=float, nargs='?', default=1e-4, help='learning rate for sequential generator')
 parser.add_argument('--beta', type=float, nargs='?', default=0.1, help='coefficient of kl loss')
 parser.add_argument('--replay_lambda', type=float, nargs='?', default=10, help='coefficient of replay loss')
-parser.add_argument('--distill_lambda', type=float, nargs='?', default=0.1, help='coefficient of distillation loss')
+parser.add_argument('--distill_lambda', type=float, nargs='?', default=1, help='coefficient of distillation loss')
 parser.add_argument('--gamma', type=float, nargs='?', default=1e-2, help='updating rate for running loss')
 parser.add_argument('--distill_loss', type=str, nargs='?', default='kl', help='loss function for knowledge distillation')
 parser.add_argument('--mix_lambda', type=float, nargs='?', default=0.5, help='coefficient for mixed loss')
