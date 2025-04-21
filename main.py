@@ -2,10 +2,10 @@ import argparse
 from train import *
 
 parser = argparse.ArgumentParser(description='experiment settings')
-parser.add_argument('--path_prefix', type=str, nargs='?', default='/root/autodl-tmp', help='path to datasets')
+parser.add_argument('--path_prefix', type=str, nargs='?', default='/home/ShareData', help='path to datasets')
 parser.add_argument('--random_seed', type=int, nargs='?', default=42, help='random seed')
 parser.add_argument('--isruc1_path', type=str, nargs='?',
-                    default='ISRUC-1', help='file path of isruc1 dataset')
+                    default='ISRUC-1/ISRUC-1', help='file path of isruc1 dataset')
 parser.add_argument('--isruc1', nargs='+', default=['C4_A1', 'LOC_A2'], help='channels for isruc1')
 parser.add_argument('--shhs_path', type=str, nargs='?',
                     default='shhs1_process6', help='file path of shhs dataset')
