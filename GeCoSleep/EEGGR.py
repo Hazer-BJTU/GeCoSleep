@@ -4,6 +4,7 @@ from . import generator
 from baselines import MultiHeadSleepNet
 from clnetworks import CLnetwork, linear_warmup_cosine_annealing
 from metric import ConfusionMatrix, evaluate_tasks_multihead
+from .HMM import HMMTaskGenerator
 
 
 def knowledge_distillation_function(loss_type):
@@ -55,6 +56,8 @@ class EEGGRnetwork(CLnetwork):
         '''statistics settings'''
         self.running_task_loss = None
         self.distill_loss, self.replay_loss = 0, 0
+        '''HMM settings'''
+        self.hmm_model = HMMTaskGenerator(args.task_num, self.device)
 
     def start_task(self):
         super(EEGGRnetwork, self).start_task()
@@ -80,6 +83,8 @@ class EEGGRnetwork(CLnetwork):
         if self.task > 0:
             self.running_task_loss = torch.ones(self.task, dtype=torch.float32, requires_grad=False, device=self.device)
             self.running_task_loss = self.running_task_loss / torch.norm(self.running_task_loss, p=2)
+        '''HMM settings'''
+        self.hmm_model.clear_samples()
 
     def start_epoch(self):
         super(EEGGRnetwork, self).start_epoch()
@@ -106,6 +111,9 @@ class EEGGRnetwork(CLnetwork):
         self.running_task_loss = self.running_task_loss / (torch.norm(self.running_task_loss, p=2) + 1e-8)
 
     def observe(self, X, y, first_time=False):
+        if first_time:
+            '''update hmm model samples'''
+            self.hmm_model.add_sample(y)
         if self.epoch < self.num_epochs_solver:
             X, y = X.to(self.device), y.to(self.device)
             if self.task > 0:
@@ -119,7 +127,8 @@ class EEGGRnetwork(CLnetwork):
                 '''perform generative replay'''
                 weights = self.running_task_loss.softmax(dim=0)
                 t = torch.multinomial(weights, y.shape[0], replacement=True)
-                F_fake = self.teacher_seq_gen.decoder.generate(y, t).detach()
+                y_hmm = self.hmm_model.generate(t)
+                F_fake = self.teacher_seq_gen.decoder.generate(y_hmm, t).detach()
                 y_fake = self.teacher_model.classify(F_fake, self.task - 1).detach()
                 y_pred = self.net.classify(F_fake, self.task)
                 L_replay = self.kdloss(y_pred, y_fake, self.args)
@@ -157,9 +166,10 @@ class EEGGRnetwork(CLnetwork):
                 '''perform generative replay for sequential generator'''
                 weights = self.running_task_loss.softmax(dim=0)
                 t = torch.multinomial(weights, y.shape[0], replacement=True)
-                F_fake = self.teacher_seq_gen.decoder.generate(y, t).detach()
+                y_hmm = self.hmm_model.generate(t)
+                F_fake = self.teacher_seq_gen.decoder.generate(y_hmm, t).detach()
                 F_prime = torch.cat((F_fake, F), dim=0)
-                y_prime = torch.cat((y, y), dim=0)
+                y_prime = torch.cat((y_hmm, y), dim=0)
                 temp = torch.ones(y.shape[0], dtype=torch.int64, requires_grad=False, device=self.device) * self.task
                 t_prime = torch.cat((t, temp), dim=0)
             else:
@@ -255,6 +265,10 @@ class EEGGRnetwork(CLnetwork):
         seq_gen_path = './modelsaved/seq_gen_task' + str(self.task - 1) + '_fold' + str(self.fold_num) + '.pth'
         torch.save(self.seq_gen.state_dict(), seq_gen_path)
         self.seq_gen_memory.append(seq_gen_path)
+        '''hmm settings'''
+        print(f'start fitting hmm model on {self.hmm_model.total_samples} samples...')
+        self.hmm_model.ready()
+        print('hmm model fitted.')
 
 
 if __name__ == '__main__':
