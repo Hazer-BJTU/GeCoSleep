@@ -43,10 +43,14 @@ class LogDocument:
             else:
                 pointer[fields[idx]] = content
 
-    def update_test_results(self, test_results, fold_idx):
+    def update_test_results(self, test_results, count_results, fold_idx):
         cnt = 0
         for task_accs, task_mF1s in test_results:
             self.append(['performance', f'task{cnt}_fold{fold_idx}'], {'acc': task_accs, 'mF1': task_mF1s})
+            cnt += 1
+        cnt = 0
+        for matrices in count_results:
+            self.append(['performance', f'task{cnt}_fold{fold_idx}', 'confusion_matrices'], matrices)
             cnt += 1
 
     def write(self):

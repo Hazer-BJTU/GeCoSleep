@@ -2,7 +2,7 @@ import sys
 import random
 import numpy as np
 from clnetworks import *
-from FCGRT import *
+from GeCoSleep import *
 from baselines import *
 from data_preprocessing import *
 from logs import *
@@ -21,6 +21,7 @@ def set_random_seed(seed):
 
 def train_cl(args, trains, valids, tests, fold_idx, logs):
     test_results = []
+    count_results = []
     clnetwork = None
     if args.replay_mode == 'none':
         clnetwork = CLnetwork(args, fold_idx, logs)
@@ -53,6 +54,7 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
     else:
         confusion = evaluate_tasks(clnetwork.net, tests, confusion, clnetwork.device, args.valid_batch)
     test_results.append((confusion.accuracy(keep_list=True), confusion.macro_f1(keep_list=True)))
+    count_results.append(confusion.get_matrix())
     for task_idx in range(args.task_num):
         print(f'start task {task_idx}:')
         clnetwork.start_task()
@@ -82,7 +84,8 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
             bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
             confusion = evaluate_tasks(bestnet, tests, confusion, clnetwork.device, args.valid_batch)
         test_results.append((confusion.accuracy(keep_list=True), confusion.macro_f1(keep_list=True)))
-    return test_results
+        count_results.append(confusion.get_matrix())
+    return test_results, count_results
 
 
 def allocate_fold(args):
@@ -135,8 +138,8 @@ def train_k_fold(args):
                 args
             )
         print(f'start fold {fold_idx}:')
-        test_results = train_cl(args, trains, valids, tests, fold_idx, exp_log)
-        exp_log.update_test_results(test_results, fold_idx)
+        test_results, count_results = train_cl(args, trains, valids, tests, fold_idx, exp_log)
+        exp_log.update_test_results(test_results, count_results, fold_idx)
         exp_log.write()
         for i in range(args.task_num + 1):
             for j in range(args.task_num):

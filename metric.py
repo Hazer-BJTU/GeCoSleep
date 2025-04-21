@@ -1,5 +1,6 @@
 import copy
 import torch
+import numpy
 from torch.utils.data import DataLoader
 
 
@@ -59,6 +60,9 @@ class ConfusionMatrix:
 
     def __getitem__(self, item):
         return self.mat[item]
+
+    def get_matrix(self):
+        return self.mat.cpu().numpy().tolist()
 
 
 def evaluate(net, loader, confusion_matrix, device):
