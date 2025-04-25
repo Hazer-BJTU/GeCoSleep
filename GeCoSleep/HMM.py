@@ -26,7 +26,7 @@ class HMMSequenceGenerator:
 
     def fit(self, seqs):
         num_samples = seqs.shape[0]
-        seqs = balance_seq(seqs, num_samples)
+        '''seqs = balance_seq(seqs, num_samples)'''
         num_samples, self.length = seqs.shape[0], seqs.shape[1]
         seqs = seqs.cpu().numpy().tolist()
         self.model.fit(seqs, lengths=num_samples)
