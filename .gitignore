@@ -9,5 +9,6 @@
 !/visualization/datacache/sampled_features.npz
 /visualization/figure/
 /visualization/modelweights/
+/visualization/results_json/
 __pycache__/
 .idea/
