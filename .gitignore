@@ -4,7 +4,9 @@
 !/modelsaved/model_saved_here.txt
 /others/
 !/others/nothing_useful.txt
-/visualization/datacache/
+/visualization/datacache/*
+!/visualization/datacache/final_points.npz
+!/visualization/datacache/sampled_features.npz
 /visualization/figure/
 /visualization/modelweights/
 __pycache__/
