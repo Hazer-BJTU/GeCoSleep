@@ -1,0 +1,11 @@
+/results/
+!/results/results_saved_here.txt
+/modelsaved/
+!/modelsaved/model_saved_here.txt
+/others/
+!/others/nothing_useful.txt
+/visualization/datacache/
+/visualization/figure/
+/visualization/modelweights/
+__pycache__/
+.idea/
