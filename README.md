@@ -24,6 +24,23 @@ These datasets were used to evaluate the performance of our proposed method. Ple
 
 Below are the available parameters in the script and their descriptions:S
 
+## Dataset
+We conducted our experiments on four publicly available sleep datasets:
+
+* ISRUC-S1: [https://sleeptight.isr.uc.pt/](https://sleeptight.isr.uc.pt/)
+* SHHS: [https://sleepdata.org/datasets/shhs](https://sleepdata.org/datasets/shhs)
+* MASS-SS3: [http://ceams-carsm.ca/en/MASS/](http://ceams-carsm.ca/en/MASS/)
+* Sleep-EDF-153: [http://www.physionet.org/physiobank/database/sleep-edfx/](http://www.physionet.org/physiobank/database/sleep-edfx/)
+
+These datasets were used to evaluate the performance of our proposed method. Please refer to the respective links for more information and access instructions.
+
+## Requirements
+
+## How to run
+### 1. Parameter Description
+
+Below are the available parameters in the script and their descriptions:S
+
 - `--path_prefix`: Dataset path prefix, default is `/home/ShareData`.
 - `--random_seed`: Random seed, default is `42`.
 - `--isruc1_path`: File path for the ISRUC-1 dataset, default is `ISRUC-1`.
