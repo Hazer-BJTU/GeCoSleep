@@ -10,5 +10,6 @@
 /visualization/figure/
 /visualization/modelweights/
 /visualization/results_json/
+/visualization/temp/
 __pycache__/
 .idea/

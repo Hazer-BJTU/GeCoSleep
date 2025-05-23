@@ -24,7 +24,7 @@ These datasets were used to evaluate the performance of our proposed method. Ple
 
 Below are the available parameters in the script and their descriptions:S
 
-- `--path_prefix`: Dataset path prefix, default is `/root/autodl-tmp`.
+- `--path_prefix`: Dataset path prefix, default is `/home/ShareData`.
 - `--random_seed`: Random seed, default is `42`.
 - `--isruc1_path`: File path for the ISRUC-1 dataset, default is `ISRUC-1`.
 - `--isruc1`: Channels for the ISRUC-1 dataset, default is `['C4_A1', 'LOC_A2']`.
@@ -68,7 +68,7 @@ Below are some example commands. You can modify the parameters as needed:
 #### Basic Training Command
 
 ```bash
-python main.py --path_prefix /path/to/datasets --random_seed 42 --cuda_idx 0 --num_epochs 200 --batch_size 32
+python main.py --random_seed 42 --cuda_idx 0 --num_epochs 200 --batch_size 32
 ```
 
 #### Training with Generator
@@ -92,18 +92,21 @@ python main.py --replay_mode ewc --ewc_lambda 1e3 --ewc_gamma 0.4 --ewc_batches 
 #### Custom Dataset Paths and Channels
 
 ```bash
-python main.py --isruc1_path /path/to/isruc1 --isruc1 C4_A1 LOC_A2 --shhs_path /path/to/shhs --shhs EEG EOG(L)
+python main.py --isruc1 C4_A1 LOC_A2 --shhs EEG EOG(L)
 ```
 
 ### 3. Output
 
-After the program finishes running, a record file named `cl_output_record_<replay_mode>.txt` will be generated, where `<replay_mode>` is the continual learning strategy you selected (e.g., `generative`, `lwf`, `ewc`, etc.). This file contains detailed output and results of the experiment.
+After each experiment, a directory will be generated in `/results`, containing:  
+Experiment result table (`.txt`)  
+
+Detailed experiment information (`.json`)  
+
+Model parameters (`.zip`)  
 
 ### 4. Notes
 
 - Ensure all dataset paths are correct.
+- All data should be preprocessed into `.mat` or `.npy`
 - Adjust the `cuda_idx` and `batch_size` parameters according to your hardware configuration.
-- If using generator or EWC strategies, ensure the relevant parameters are set appropriately.
-
-We hope this guide helps you run your experiments smoothly! If you have any questions, feel free to contact the developer.
-
+- Avoid running on windows.
