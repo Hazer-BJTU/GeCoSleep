@@ -115,11 +115,9 @@ python main.py --isruc1 C4_A1 LOC_A2 --shhs EEG EOG(L)
 ### 3. Output
 
 After each experiment, a directory will be generated in `/results`, containing:  
-Experiment result table (`.txt`)  
-
-Detailed experiment information (`.json`)  
-
-Model parameters (`.zip`)  
+- Experiment result table (`.txt`)  
+- Detailed experiment information (`.json`)  
+- Model parameters (`.zip`)  
 
 ### 4. Notes
 
