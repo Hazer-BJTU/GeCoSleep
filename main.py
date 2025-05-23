@@ -33,7 +33,7 @@ parser.add_argument('--dropout', type=float, nargs='?', default=0.05, help='drop
 parser.add_argument('--weight_decay', type=float, nargs='?', default=1e-4, help='weight decay value')
 parser.add_argument('--lr', type=float, nargs='?', default=1e-4, help='learning rate')
 parser.add_argument('--replay_mode', type=str, nargs='?', default='none', help='continual learning strategy')
-parser.add_argument('--min_epoch', type=float, nargs='?', default=10, help='min epochs for model saving')
+parser.add_argument('--min_epoch', type=int, nargs='?', default=10, help='min epochs for model saving')
 '''knowledge distillation setting'''
 parser.add_argument('--tau', type=float, nargs='?', default=1, help='temperature for knowledge distillation')
 '''generative replay settings'''
@@ -60,7 +60,7 @@ parser.add_argument('--num_clusters', type=int, nargs='?', default=8, help='num 
 parser.add_argument('--time_reverse_rate', type=float, nargs='?', default=0.05, help='frequency for time reversion')
 '''other settings'''
 parser.add_argument('--enable_multihead', action='store_true', help='whether enable multihead')
-parser.add_argument('--replay_buffer', type=float, nargs='?', default=512, help='replay buffer size')
+parser.add_argument('--replay_buffer', type=int, nargs='?', default=512, help='replay buffer size')
 parser.add_argument('--joint_training', action='store_true', help='start joint training')
 args = parser.parse_args()
 

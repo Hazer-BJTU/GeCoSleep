@@ -1,6 +1,7 @@
 import torch
 import math
 import torch.nn as nn
+# from thop import profile
 
 
 class MultiScaleCNN(nn.Module):
@@ -189,7 +190,15 @@ def init_weight(module):
 
 
 if __name__ == '__main__':
+    '''
     X = torch.randn((4, 10, 2, 3000))
     net = SleepNet(2, 0.25)
     print(net(X).shape)
     torch.save(net.state_dict(), 'SleepNet.pth')
+    X = torch.randn((1, 10, 2, 3000))
+    net = SleepNet(2, 0.25)
+    flops, params = profile(net, inputs=(X,))
+    print(f"FLOPs: {flops / 1e6:.2f} M")
+    print(f"Params: {params / 1e6:.2f} M")
+    '''
+    pass

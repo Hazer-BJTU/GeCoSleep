@@ -1,6 +1,7 @@
 import torch
 from models import *
 from data_preprocessing import *
+# from thop import profile
 
 
 class PositionalEncoding(nn.Module):
@@ -131,6 +132,7 @@ class SequentialVAE(nn.Module):
 
 
 if __name__ == '__main__':
+    '''
     X = torch.randn((4, 10, 512), dtype=torch.float32, requires_grad=False)
     y = torch.randint(0, 5, (4, 10), dtype=torch.int64, requires_grad=False)
     t = torch.randint(0, 4, [4], dtype=torch.int64, requires_grad=False)
@@ -138,3 +140,17 @@ if __name__ == '__main__':
     X_hat, kl_loss = net(X, y, t)
     print(X_hat.shape, kl_loss)
     torch.save(net.state_dict(), 'EEGVAE.pth')
+    X = torch.randn((1, 10, 512), dtype=torch.float32, requires_grad=False)
+    y = torch.randint(0, 5, (1, 10), dtype=torch.int64, requires_grad=False)
+    t = torch.randint(0, 4, [1], dtype=torch.int64, requires_grad=False)
+    net = SequentialVAE(512, 0)
+    flops, params = profile(net, inputs=(X, y, t))
+    print(f"VAE FLOPs: {flops / 1e6:.2f} M")
+    print(f"VAE Params: {params / 1e6:.2f} M")
+    decoder = SequentialVAEdecoder(512, 8, 2, 0)
+    z = torch.randn((1, 10, 512), dtype=torch.float32, requires_grad=False)
+    flops, params = profile(decoder, inputs=(z, y, t))
+    print(f"Decoder FLOPs: {flops / 1e6:.2f} M")
+    print(f"Decoder Params: {params / 1e6:.2f} M")
+    '''
+    pass
