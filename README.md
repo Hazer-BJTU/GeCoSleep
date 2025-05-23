@@ -1,5 +1,4 @@
 # GeCoSleep
----
 GeCoSleep: A Generative Continual Learning Frame work for Cross-Center Adaptation in Sleep Staging
 
 ![structure _1_-1.png](https://s2.loli.net/2025/05/23/5OakgcuLVbRCjPi.png)
@@ -9,7 +8,6 @@ GeCoSleep employs a generative replay strategy to reconstruct the distribution o
 These are the source code and experimental setup of GeCoSleep.
 
 ## Dataset
----
 We conducted our experiments on four publicly available sleep datasets:
 
 * ISRUC-S1: [https://sleeptight.isr.uc.pt/](https://sleeptight.isr.uc.pt/)
@@ -20,12 +18,9 @@ We conducted our experiments on four publicly available sleep datasets:
 These datasets were used to evaluate the performance of our proposed method. Please refer to the respective links for more information and access instructions.
 
 ## Requirements
----
 
 ## How to run
----
-
-## 1. Parameter Description
+### 1. Parameter Description
 
 Below are the available parameters in the script and their descriptions:S
 
@@ -66,45 +61,45 @@ Below are the available parameters in the script and their descriptions:S
 - `--ewc_batches`: Number of batches for calculating FIM, default is `256`.
 - `--replay_buffer`: Replay buffer size for each task, default is `128`.
 
-## 2. Example Commands
+### 2. Example Commands
 
 Below are some example commands. You can modify the parameters as needed:
 
-### Basic Training Command
+#### Basic Training Command
 
 ```bash
 python main.py --path_prefix /path/to/datasets --random_seed 42 --cuda_idx 0 --num_epochs 200 --batch_size 32
 ```
 
-### Training with Generator
+#### Training with Generator
 
 ```bash
 python main.py --replay_mode generative --num_epochs_generator 100 --lr_seq_gen 1e-4 --beta 0.1 --tau 5 --gamma 1e-2
 ```
 
-### Training with LWF Strategy
+#### Training with LWF Strategy
 
 ```bash
 python main.py --replay_mode lwf --enable_multihead
 ```
 
-### Training with EWC Strategy
+#### Training with EWC Strategy
 
 ```bash
 python main.py --replay_mode ewc --ewc_lambda 1e3 --ewc_gamma 0.4 --ewc_batches 256
 ```
 
-### Custom Dataset Paths and Channels
+#### Custom Dataset Paths and Channels
 
 ```bash
 python main.py --isruc1_path /path/to/isruc1 --isruc1 C4_A1 LOC_A2 --shhs_path /path/to/shhs --shhs EEG EOG(L)
 ```
 
-## 3. Output
+### 3. Output
 
 After the program finishes running, a record file named `cl_output_record_<replay_mode>.txt` will be generated, where `<replay_mode>` is the continual learning strategy you selected (e.g., `generative`, `lwf`, `ewc`, etc.). This file contains detailed output and results of the experiment.
 
-## 4. Notes
+### 4. Notes
 
 - Ensure all dataset paths are correct.
 - Adjust the `cuda_idx` and `batch_size` parameters according to your hardware configuration.
