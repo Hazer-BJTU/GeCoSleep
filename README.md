@@ -1,11 +1,33 @@
-# EEG-Generative-Replay
-## Experiment Setup and Running Guide
+# GeCoSleep
+---
+GeCoSleep: A Generative Continual Learning Frame work for Cross-Center Adaptation in Sleep Staging
 
-This guide will help you understand how to use the experiment setup script and provide example commands to run the program.
+![structure _1_-1.png](https://s2.loli.net/2025/05/23/5OakgcuLVbRCjPi.png)
+
+GeCoSleep employs a generative replay strategy to reconstruct the distribution of historical data without storing any raw samples, effectively mitigating catastrophic forgetting. 
+
+These are the source code and experimental setup of GeCoSleep.
+
+## Dataset
+---
+We conducted our experiments on four publicly available sleep datasets:
+
+* ISRUC-S1: [https://sleeptight.isr.uc.pt/](https://sleeptight.isr.uc.pt/)
+* SHHS: [https://sleepdata.org/datasets/shhs](https://sleepdata.org/datasets/shhs)
+* MASS-SS3: [http://ceams-carsm.ca/en/MASS/](http://ceams-carsm.ca/en/MASS/)
+* Sleep-EDF-153: [http://www.physionet.org/physiobank/database/sleep-edfx/](http://www.physionet.org/physiobank/database/sleep-edfx/)
+
+These datasets were used to evaluate the performance of our proposed method. Please refer to the respective links for more information and access instructions.
+
+## Requirements
+---
+
+## How to run
+---
 
 ## 1. Parameter Description
 
-Below are the available parameters in the script and their descriptions:
+Below are the available parameters in the script and their descriptions:S
 
 - `--path_prefix`: Dataset path prefix, default is `/root/autodl-tmp`.
 - `--random_seed`: Random seed, default is `42`.
