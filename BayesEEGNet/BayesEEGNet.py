@@ -49,3 +49,7 @@ class BayesEEGNet(nn.Module):
 
         graph_out['y_hat'] = x
         return graph_out
+
+
+if __name__ == '__main__':
+    pass

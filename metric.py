@@ -132,5 +132,21 @@ def evaluate_tasks_packnet(net, datasets, confusion_matrix, device, clnetwork, b
     return confusion_matrix
 
 
+def evaluate_tasks_bayes(net, datasets, confusion_matrix, device, batch_size=1):
+    net.to(device)
+    net.eval()
+    with torch.no_grad():
+        for idx in range(len(datasets)):
+            loader = DataLoader(datasets[idx], batch_size=batch_size, shuffle=False)
+            for X, y in loader:
+                X, y = X.to(device), y.to(device)
+                batch_size, window_size, num_channels, series = X.shape
+                X = X.view(batch_size * window_size, num_channels, series)
+                y = y.view(-1)
+                outputs = net(X)
+                confusion_matrix.count_task_separated(outputs['y_hat'], y, idx)
+    return confusion_matrix
+
+
 if __name__ == '__main__':
     pass

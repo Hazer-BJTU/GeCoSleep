@@ -62,6 +62,12 @@ parser.add_argument('--time_reverse_rate', type=float, nargs='?', default=0.05, 
 parser.add_argument('--enable_multihead', action='store_true', help='whether enable multihead')
 parser.add_argument('--replay_buffer', type=int, nargs='?', default=512, help='replay buffer size')
 parser.add_argument('--joint_training', action='store_true', help='start joint training')
+'''BayesEEGNet settings'''
+parser.add_argument('--bayes_eeg_params', nargs='+', default= {
+    'optimizer': 'Adam', 'lr': 0.001, 'lr_decay': 0.0, 'weight_decay': 0.0, 'batchSize': 256,
+    'minEpoch': 100, 'hiddenDim': 512, 'num_nodes': 2, 'graph_dim': 512, 'lamada1': 1e-7,
+    'lamada2': 1e-7, 'targetDim': 5, 'dense': 64, 'seed': 0, 'loss_score': [1, 1.5, 1, 1, 1.5]
+}, help='params for sleep model BayesEEGNet')
 args = parser.parse_args()
 
 if __name__ == '__main__':
