@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from .BayesEEGNet import BayesEEGNet
 from clnetworks import CLnetwork, linear_warmup_cosine_annealing
-from metric import ConfusionMatrix, evaluate_tasks
+from metric import ConfusionMatrix, evaluate_tasks_bayes
 
 
 def get_bayes_eeg_optimizer(net, params):
@@ -65,8 +65,8 @@ class BayesCLNetwork(CLnetwork):
         learning_rate = self.optimizer.state_dict()['param_groups'][0]['lr']
         train_acc, train_mf1 = self.confusion_matrix.accuracy(), self.confusion_matrix.macro_f1()
         print(f'epoch: {self.epoch}, train loss: {self.train_loss / self.cnt:.3f}, '
-              f'loss kl1: {self.train_loss_kl1 / self.cnt:.3f}, '
-              f'loss kl2: {self.train_loss_kl2 / self.cnt:.3f}, '
+              f'1e4 loss kl1: {self.train_loss_kl1 / self.cnt * 1e4:.3f}, '
+              f'1e8 loss kl2: {self.train_loss_kl2 / self.cnt * 1e8:.3f}, '
               f'train accuracy: {train_acc:.3f}, '
               f"macro F1: {train_mf1:.3f}, 1000 lr: {learning_rate * 1000:.3f}")
         self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'epoch:{self.epoch}'], {
@@ -80,8 +80,8 @@ class BayesCLNetwork(CLnetwork):
         if (self.epoch + 1) % self.args.valid_epoch == 0:
             print(f'validating on the datasets...')
             valid_confusion = ConfusionMatrix(1)
-            valid_confusion = evaluate_tasks(self.net, [valid_dataset], valid_confusion,
-                                             self.device, self.args.valid_batch)
+            valid_confusion = evaluate_tasks_bayes(self.net, [valid_dataset], valid_confusion,
+                                                   self.device, self.args.valid_batch)
             valid_acc, valid_mf1 = valid_confusion.accuracy(), valid_confusion.macro_f1()
             print(f'valid accuracy: {valid_acc:.3f}, valid macro F1: {valid_mf1:.3f}')
             self.logs.append(['train_info', f'task{self.task}_fold{self.fold_num}', f'valid epoch:{self.epoch}'], {

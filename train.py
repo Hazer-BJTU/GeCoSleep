@@ -7,6 +7,7 @@ from baselines import *
 from data_preprocessing import *
 from logs import *
 from BayesEEGNet import *
+from DeepSleepNet import *
 
 
 def set_random_seed(seed):
@@ -48,6 +49,8 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
         clnetwork = AGEM(args, fold_idx, logs)
     elif args.replay_mode == 'bayes':
         clnetwork = BayesCLNetwork(args, fold_idx, logs)
+    elif args.replay_mode == 'deep':
+        clnetwork = DeepCLNetwork(args, fold_idx, logs)
     confusion = ConfusionMatrix(args.task_num)
     print('start first testing...')
     if args.replay_mode == 'packnet':
@@ -95,6 +98,10 @@ def train_cl(args, trains, valids, tests, fold_idx, logs):
             )
             bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
             confusion = evaluate_tasks_bayes(bestnet, tests, confusion, clnetwork.device, args.valid_batch)
+        elif args.replay_mode == 'deep':
+            bestnet = DeepSleepNet(len(args.isruc1), dropout=args.dropout)
+            bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
+            confusion = evaluate_tasks(bestnet, tests, confusion, clnetwork.device, args.valid_batch)
         else:
             bestnet = SleepNet(len(args.isruc1), args.dropout)
             bestnet.load_state_dict(torch.load(clnetwork.best_net_memory[task_idx], weights_only=True))
