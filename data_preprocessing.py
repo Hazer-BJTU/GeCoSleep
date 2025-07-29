@@ -178,6 +178,51 @@ def load_data_sleepedf(filepath, window_size, channels, total_num, normalize):
     return datas, labels
 
 
+def load_data_physionet(filepath, window_size, channels, total_num, normalize):
+    file_names = [file for file in os.listdir(filepath) if file.endswith('_x.npy')]
+    file_names.sort()
+    physionet_channels = ['C4', 'E1']
+    channel_index = [physionet_channels.index(c) for c in channels]
+    datas, labels = [], []
+    for file in file_names:
+        print(f'loading raw data from {os.path.join(filepath, file)}')
+        try:
+            npy_data = np.load(os.path.join(filepath, file))
+            npy_label = np.load(os.path.join(filepath, file[:-6] + '_y.npy'))
+        except IOError as e:
+            print(f"Failed to load data from {os.path.join(filepath, file)}: {e}")
+            continue
+        raw_data_sample = npy_data[:, channel_index, :]
+        raw_data_trans = raw_data_sample.transpose(1, 0, 2)
+        X = None
+        for idx in range(raw_data_trans.shape[0]):
+            series = raw_data_trans[idx]
+            if normalize:
+                mu, sigma = np.mean(series), np.std(series)
+                series = (series - mu) / sigma
+            '''
+            print(f'calculating stft for channel index {idx} in sleepedf...')
+            _, _, Zxx = signal.stft(series, 100, 'hann', 256)
+            Zxx = 20 * np.log10(np.abs(Zxx))
+            '''
+            if X is None:
+                X = torch.unsqueeze(torch.tensor(series, dtype=torch.float32, requires_grad=False), dim=1)
+            else:
+                temp = torch.unsqueeze(torch.tensor(series, dtype=torch.float32, requires_grad=False), dim=1)
+                X = torch.cat((X, temp), dim=1)
+        y = torch.tensor(npy_label, dtype=torch.int64, requires_grad=False)
+        data_seq, label_seq, segs = [], [], X.shape[0] // window_size
+        for idx in range(segs):
+            data_seq.append(X[idx * window_size: (idx + 1) * window_size])
+            label_seq.append(y[idx * window_size: (idx + 1) * window_size])
+        datas.append(data_seq)
+        labels.append(label_seq)
+        if len(datas) >= total_num:
+            print('sufficient data loaded...')
+            break
+    return datas, labels
+
+
 class DataWrapper(Dataset):
     def __init__(self, data, label, args, augmentation=False, task=None):
         assert len(data) == len(label)
@@ -293,6 +338,13 @@ def load_all_datasets(args):
                                                        args.total_num['Sleep-EDF'], normalize)
             datas.append(task_data)
             labels.append(task_label)
+        elif task_name == 'PhysioNet':
+            normalize = args.normalize
+            file_path = os.path.join(args.path_prefix, args.physionet_path)
+            task_data, task_label = load_data_physionet(file_path, args.window_size, args.physionet,
+                                                        args.total_num['PhysioNet'], normalize)
+            datas.append(task_data)
+            labels.append(task_label)
     return datas, labels
 
 
@@ -313,4 +365,4 @@ if __name__ == '__main__':
     for X, y in test_loader:
         print(f'{X.shape}, {y.shape}')
     '''
-    pass
+    datas, labels = load_data_physionet('/root/autodl-tmp/PhysioNet-Challenge-2018_sub251_C4E1', 10, ['C4', 'E1'], 5, True)

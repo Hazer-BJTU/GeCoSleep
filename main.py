@@ -17,7 +17,7 @@ parser.add_argument('--sleep_edf_path', type=str, nargs='?',
                     default='sleep-edf-153-3chs', help='file path of sleepedf dataset')
 parser.add_argument('--sleep_edf', nargs='+', default=['Fpz-Cz', 'EOG'], help='channels of sleepedf')
 parser.add_argument('--normalize', type=bool, nargs='?', default=True, help='whether normalize samples in subjects')
-parser.add_argument('--task_num', type=int, nargs='?', default=4, help='number of tasks')
+parser.add_argument('--task_num', type=int, nargs='?', help='number of tasks')
 parser.add_argument('--task_names', nargs='+', default=['ISRUC1', 'SHHS', 'MASS', 'Sleep-EDF'],
                     help='the list of task names')
 parser.add_argument('--cuda_idx', type=int, nargs='?', default=0, help='device index')
@@ -68,7 +68,12 @@ parser.add_argument('--bayes_eeg_params', nargs='+', default= {
     'minEpoch': 100, 'hiddenDim': 512, 'num_nodes': 2, 'graph_dim': 512, 'lamada1': 1e-7,
     'lamada2': 1e-7, 'targetDim': 5, 'dense': 64, 'seed': 0, 'loss_score': [1, 1.5, 1, 1, 1.5]
 }, help='params for sleep model BayesEEGNet')
+'''Additional dataset settings'''
+parser.add_argument('--physionet_path', type=str, nargs='?',
+                    default='PhysioNet-Challenge-2018_sub251_C4E1', help='file path of physionet dataset')
+parser.add_argument('--physionet', nargs='+', default=['C4', 'E1'], help='channels for physionet')
 args = parser.parse_args()
+args.task_num = len(args.task_names)
 
 if __name__ == '__main__':
     R, exp_log = train_k_fold(args)
