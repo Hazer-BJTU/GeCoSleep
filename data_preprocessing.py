@@ -1,8 +1,10 @@
 import numpy as np
 import pickle as pkl
 import scipy.io as sio
+import pandas as pd
 import random
 import torch
+import mne
 import os
 from scipy import signal
 from torch.utils.data import Dataset
@@ -223,6 +225,119 @@ def load_data_physionet(filepath, window_size, channels, total_num, normalize):
     return datas, labels
 
 
+def load_data_hsp(filepath, window_size, channels, total_num, normalize, datadir='S0001'):
+    subject_dirs = [dir_name for dir_name in os.listdir(os.path.join(filepath, datadir)) if not dir_name.startswith('.')]
+    subject_dirs.sort()
+    with open(os.path.join(filepath, 'S0001_final_files.txt'), 'r') as file:
+        include_files = file.readlines()
+        include_files = [item.strip() for item in include_files]
+    exclude_files = ['sub-S0001111189848_ses-1_task-psg_eeg.fif', 'sub-S0001111190905_ses-3_task-psg_eeg.fif',
+                     'sub-S0001111190905_ses-4_task-psg_eeg.fif', 'sub-S0001111191757_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111192352_ses-2_task-psg_eeg.fif', 'sub-S0001111192396_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111193501_ses-1_task-psg_eeg.fif', 'sub-S0001111193967_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111195626_ses-1_task-psg_eeg.fif', 'sub-S0001111198326_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111198446_ses-1_task-psg_eeg.fif', 'sub-S0001111198643_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111201541_ses-1_task-psg_eeg.fif', 'sub-S0001111204219_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111204219_ses-2_task-psg_eeg.fif', 'sub-S0001111204949_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111206862_ses-1_task-psg_annotations.csv',
+                     'sub-S0001111531393_ses-2_task-psg_eeg.fif', 'sub-S0001111534168_ses-2_task-psg_eeg.fif',
+                     'sub-S0001111534857_ses-2_task-psg_annotations.csv',
+                     'sub-S0001111580910_ses-1_task-psg_eeg.fif', 'sub-S0001111585731_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111589934_ses-1_task-psg_eeg.fif', 'sub-S0001111590846_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111592382_ses-1_task-psg_eeg.fif', 'sub-S0001111593304_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111594612_ses-2_task-psg_eeg.fif', 'sub-S0001111594612_ses-6_task-psg_eeg.fif',
+                     'sub-S0001111594612_ses-7_task-psg_eeg.fif', 'sub-S0001111595224_ses-2_task-psg_eeg.fif',
+                     'sub-S0001111596342_ses-1_task-psg_eeg.fif', 'sub-S0001111600524_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111600829_ses-2_task-psg_eeg.fif', 'sub-S0001111600869_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111602832_ses-2_task-psg_eeg.fif', 'sub-S0001111603884_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111603996_ses-3_task-psg_eeg.fif', 'sub-S0001111605716_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111606551_ses-1_task-psg_eeg.fif', 'sub-S0001111606551_ses-2_task-psg_eeg.fif',
+                     'sub-S0001111607172_ses-1_task-psg_eeg.fif', 'sub-S0001111608665_ses-3_task-psg_eeg.fif',
+                     'sub-S0001111610656_ses-1_task-psg_eeg.fif', 'sub-S0001111611361_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111611949_ses-1_task-psg_eeg.fif', 'sub-S0001111612898_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111616525_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111617823_ses-1_task-psg_annotations.csv',
+                     'sub-S0001111265591_ses-1_task-psg_eeg.fif', 'sub-S0001111325229_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111415453_ses-1_task-psg_eeg.fif', 'sub-S0001111418143_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111475060_ses-1_task-psg_eeg.fif', 'sub-S0001111480684_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111513011_ses-1_task-psg_eeg.fif', 'sub-S0001111520136_ses-2_task-psg_eeg.fif',
+                     'sub-S0001111618995_ses-1_task-psg_eeg.fif', 'sub-S0001111236273_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111250016_ses-1_task-psg_eeg.fif', 'sub-S0001111255993_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111269982_ses-6_task-psg_eeg.fif', 'sub-S0001111281528_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111301802_ses-2_task-psg_eeg.fif', 'sub-S0001111303895_ses-3_task-psg_eeg.fif',
+                     'sub-S0001111325116_ses-1_task-psg_eeg.fif', 'sub-S0001111343357_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111350330_ses-1_task-psg_eeg.fif', 'sub-S0001111382446_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111406573_ses-1_task-psg_eeg.fif', 'sub-S0001111414731_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111425041_ses-1_task-psg_eeg.fif', 'sub-S0001111447432_ses-1_task-psg_eeg.fif',
+                     'sub-S0001111504311_ses-2_task-psg_eeg.fif']
+    p_names = []
+    for sub in subject_dirs:
+        for session in os.listdir(os.path.join(filepath, datadir, sub)):
+            if session.startswith('.') or os.path.join(sub, session) not in include_files:
+                continue
+            for data in os.listdir(os.path.join(filepath, datadir, sub, session, 'eeg')):
+                if not data.startswith('.') and data.endswith('.fif') and data not in exclude_files:
+                    p_names.append(os.path.join(filepath, datadir, sub, session, 'eeg', data))
+    datas, labels = [], []
+    for file_path in p_names:
+        # print(f'loading raw data from {file_path}')
+        try:
+            raw_data = mne.io.read_raw_fif(file_path)
+        except IOError as e:
+            print(f"Failed to load data from {file_path}: {e}")
+            continue
+        raw_data.pick_channels(channels)
+        freq = raw_data.info['sfreq']
+        xall = raw_data.get_data()
+        xall = signal.resample(xall, int(xall.shape[1] * 100 // freq), axis=1)
+        label_file = file_path.replace('_eeg.fif', '_annotations.csv')
+        if not os.path.exists(label_file):
+            print(f"different label file: {label_file}")
+            break
+        df = pd.read_csv(label_file)
+        df_stage = df[df['event'].str.startswith('Sleep_stage_', na=False)]
+        df_valid = df_stage[df_stage['event'] != 'Sleep_stage_?'].copy()
+        valid_start_idx = df_valid.index[0]
+        valid_end_idx = df_valid.index[-1]
+        df_sleep = df_stage.loc[valid_start_idx:valid_end_idx].reset_index(drop=True)
+        stage2int = {
+            'Sleep_stage_W': 0,
+            'Sleep_stage_N1': 1,
+            'Sleep_stage_N2': 2,
+            'Sleep_stage_N3': 3,
+            'Sleep_stage_R': 4,
+            'Sleep_stage_REM': 4
+        }
+        df_sleep['label'] = df_sleep['event'].map(stage2int)
+        y_group = df_sleep['label'].to_numpy()
+        if np.isnan(y_group).any():
+            print("y_group NaN file exists：", file_path)
+            print("NaN in label：", df_sleep[df_sleep['label'].isnull()])
+            continue
+        start_epoch = int(df_sleep.iloc[0]['epoch'])
+        end_epoch = int(df_sleep.iloc[-1]['epoch'])
+        samples_per_epoch = 3000
+        start_sample = (start_epoch - 1) * samples_per_epoch
+        end_sample = end_epoch * samples_per_epoch
+        xall = xall[:, start_sample:end_sample]
+        if normalize:
+            xall = (xall - np.mean(xall, axis=1, keepdims=True)) / np.std(xall, axis=1, keepdims=True)
+        num_channels = xall.shape[0]
+        xall = xall.reshape(num_channels, -1, 3000).transpose(1, 0, 2)
+        X = torch.tensor(xall, dtype=torch.float32, requires_grad=False)
+        y = torch.tensor(y_group, dtype=torch.int64, requires_grad=False)
+        data_seq, label_seq, segs = [], [], X.shape[0] // window_size
+        for idx in range(segs):
+            data_seq.append(X[idx * window_size: (idx + 1) * window_size])
+            label_seq.append(y[idx * window_size: (idx + 1) * window_size])
+        datas.append(data_seq)
+        labels.append(label_seq)
+        if len(datas) >= total_num:
+            print('sufficient data loaded...')
+            break
+    return datas, labels
+
+
 class DataWrapper(Dataset):
     def __init__(self, data, label, args, augmentation=False, task=None):
         assert len(data) == len(label)
@@ -345,6 +460,13 @@ def load_all_datasets(args):
                                                         args.total_num['PhysioNet'], normalize)
             datas.append(task_data)
             labels.append(task_label)
+        elif task_name == 'HSP':
+            normalize = args.normalize
+            file_path = os.path.join(args.path_prefix, args.hsp_path)
+            task_data, task_label = load_data_hsp(file_path, args.window_size, args.hsp,
+                                                  args.total_num['HSP'], normalize)
+            datas.append(task_data)
+            labels.append(task_label)
     return datas, labels
 
 
@@ -364,5 +486,6 @@ if __name__ == '__main__':
     print('test loader...')
     for X, y in test_loader:
         print(f'{X.shape}, {y.shape}')
-    '''
     datas, labels = load_data_physionet('/root/autodl-tmp/PhysioNet-Challenge-2018_sub251_C4E1', 10, ['C4', 'E1'], 5, True)
+    '''
+    load_data_hsp('/root/autodl-tmp/HSP_processed_0624_taiyang', 10, ['C4', 'E1'], 5, True)

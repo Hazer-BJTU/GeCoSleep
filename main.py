@@ -72,6 +72,9 @@ parser.add_argument('--bayes_eeg_params', nargs='+', default= {
 parser.add_argument('--physionet_path', type=str, nargs='?',
                     default='PhysioNet-Challenge-2018_sub251_C4E1', help='file path of physionet dataset')
 parser.add_argument('--physionet', nargs='+', default=['C4', 'E1'], help='channels for physionet')
+parser.add_argument('--hsp_path', type=str, nargs='?',
+                    default='HSP_processed_0624_taiyang', help='file path of hsp dataset')
+parser.add_argument('--hsp', nargs='+', default=['C4', 'E1'], help='channels for hsp')
 args = parser.parse_args()
 args.task_num = len(args.task_names)
 
